@@ -1,9 +1,11 @@
-# Credentials
+# Credentials and secrets
 *.json
-!package.json
-!package-lock.json
-!tsconfig.json
+gen-lang-client-*
 .env
+credentials/
+*credentials*
+*.pem
+*.key
 
 # Python
 __pycache__/
