@@ -20,7 +20,7 @@ def run():
     apply_delegation_fix()
     
     parser = argparse.ArgumentParser(description='Codex Simulator')
-    parser.add_argument('--mode', choices=['report', 'terminal'], default='report', 
+    parser.add_argument('--mode', choices=['report', 'terminal'], default='terminal', 
                         help='Mode to run (report or terminal)')
     parser.add_argument('--no-warning', action='store_true', 
                         help='Disable safety warning for terminal mode')
@@ -29,7 +29,7 @@ def run():
     args = parser.parse_args()
     
     if args.mode == 'terminal':
-        run_terminal_assistant(show_warning=not args.no_warning)
+        run_terminal_assistant_with_flows(show_warning=not args.no_warning)
     else:
         run_report(topic=args.topic)
         
@@ -37,15 +37,29 @@ def run_report(topic='AI LLMs'):
     """Run the standard report generation crew"""
     inputs = {
         'topic': topic,
-        'current_year': str(datetime.now().year)
+        'current_year': str(datetime.now().year),
+        # Add dummy values for terminal-specific template variables to prevent errors
+        'user_command': 'report_generation',
+        'cwd': os.getcwd(),
+        'file_request': 'none',
+        'code_snippet': 'none',
+        'search_query': f'Information about {topic}',
+        'command': f'Generate report about {topic}'
     }
     
     try:
         print(f"Running report generation on topic: {topic}")
-        CodexSimulator().crew().kickoff(inputs=inputs)
+        # Create a specific crew instance for report generation
+        simulator = CodexSimulator()
+        # Use only the necessary agents for report generation
+        report_crew = simulator.create_report_crew()
+        report_crew.kickoff(inputs=inputs)
         print(f"Report completed! See report.md for results.")
     except Exception as e:
-        raise Exception(f"An error occurred while running the crew: {e}")
+        print(f"Error running report: {str(e)}")
+        if os.environ.get("DEBUG") == "1":
+            traceback.print_exc()
+        print("\nTrying run_direct_py312.py might be more reliable for now.")
 
 def run_terminal_assistant(show_warning=True):
     """Run the terminal assistant in interactive mode"""

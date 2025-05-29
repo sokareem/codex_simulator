@@ -4,6 +4,7 @@ from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
 from crewai.flow import Flow, start, listen, router, or_
 from crewai import Crew
+from .state_manager import LocationData # Import LocationData
 
 # Define the state model with Pydantic
 class TerminalState(BaseModel):
@@ -11,6 +12,10 @@ class TerminalState(BaseModel):
     command_history: List[Dict[str, Any]] = []
     context: Dict[str, Any] = {}
     session_data: Dict[str, Any] = {}
+    # Add location state from SessionState in state_manager.py
+    current_location: Optional[LocationData] = None
+    location_permission: str = "denied"
+    named_locations: Dict[str, LocationData] = {}
 
 # Make the flow generic over this state type
 class TerminalAssistantFlow(Flow[TerminalState]):
@@ -42,6 +47,9 @@ class TerminalAssistantFlow(Flow[TerminalState]):
             'code_analysis': 'handle_code_analysis',
             'multi_step_workflow': 'handle_multi_step_workflow',
             'system_monitoring': 'handle_system_monitoring',
+            'set_location': 'handle_set_location', # New intent
+            'get_location_info': 'handle_get_location_info', # New intent
+            'add_named_location': 'handle_add_named_location', # New intent
             'complex_query': 'handle_complex_query',
             'needs_clarification': 'request_clarification'
         }
@@ -66,6 +74,18 @@ class TerminalAssistantFlow(Flow[TerminalState]):
         """Enhanced intent classification with meta-analysis and multi-step detection"""
         command_lower = command.lower().strip()
         
+        # Location-based commands
+        if command_lower.startswith("set my location to ") or command_lower.startswith("set location to "):
+            return 'set_location'
+        if command_lower.startswith("add location ") and " as " in command_lower:
+            return 'add_named_location'
+        if "near me" in command_lower or "around here" in command_lower or \
+           (any(kw in command_lower for kw in ["find", "search", "what is"]) and \
+            any(loc_kw in command_lower for loc_kw in [" nearby", " in my area", " close to me"])):
+            return 'get_location_info'
+        if command_lower in ["where am i?", "what is my current location?", "show my location"]:
+            return 'get_location_info'
+
         # Basic check for vagueness (example, can be more sophisticated)
         if len(command_lower.split()) < 2 and command_lower not in ['ls', 'pwd', 'help', 'df', 'top', 'exit', 'quit']:
              if not any(kw in command_lower for kw in ['list', 'show', 'what', 'how', 'explain', 'run', 'execute', 'search', 'find', 'analyze', 'monitor', 'cd', 'cat']):
@@ -150,13 +170,18 @@ class TerminalAssistantFlow(Flow[TerminalState]):
         try:
             state_context = {
                 'command': self._current_command,
-                'cwd': os.getcwd(),
-                # 'context': self.state.context # Pass flow's context if needed by crew
+                'cwd': self.state.cwd, # Use self.state.cwd
+                'current_location': self.state.current_location if self.state.location_permission != "denied" else None,
+                'location_permission': self.state.location_permission,
             }
             file_crew = CrewFactory.create_file_operations_crew(state_context)
             # Inputs for kickoff can be used if task description has placeholders like {some_context_var}
             crew_result = file_crew.kickoff(inputs={'flow_context': self.state.context}) 
             
+            # Update CWD from crew_result if necessary
+            if hasattr(crew_result, 'cwd_update') and os.path.isdir(crew_result.cwd_update):
+                self.state.cwd = crew_result.cwd_update
+
             return {
                 'command': self._current_command,
                 'result': crew_result,
@@ -180,7 +205,10 @@ class TerminalAssistantFlow(Flow[TerminalState]):
             # Pass command and safety_checks directly to the factory method
             code_crew = CrewFactory.create_code_execution_crew(
                 command=self._current_command,
-                safety_checks=True # Example, could be configurable
+                safety_checks=True, # Example, could be configurable
+                # Pass location context if needed by this crew type
+                current_location=self.state.current_location if self.state.location_permission != "denied" else None,
+                location_permission=self.state.location_permission
             )
             crew_result = code_crew.kickoff(inputs={'flow_context': self.state.context})
             
@@ -204,7 +232,12 @@ class TerminalAssistantFlow(Flow[TerminalState]):
         from .crew_factories import CrewFactory
         
         try:
-            web_crew = CrewFactory.create_research_crew(query=self._current_command)
+            web_crew = CrewFactory.create_research_crew(
+                query=self._current_command,
+                # Pass location context if needed by this crew type
+                current_location=self.state.current_location if self.state.location_permission != "denied" else None,
+                location_permission=self.state.location_permission
+            )
             crew_result = web_crew.kickoff(inputs={'flow_context': self.state.context})
             
             return {
@@ -276,7 +309,10 @@ class TerminalAssistantFlow(Flow[TerminalState]):
             # Create specialized crew for code analysis
             code_crew = CrewFactory.create_code_analysis_crew(
                 command=self._current_command,
-                analysis_type='code_review' # Example, could be dynamic
+                analysis_type='code_review', # Example, could be dynamic
+                # Pass location context if needed
+                current_location=self.state.current_location if self.state.location_permission != "denied" else None,
+                location_permission=self.state.location_permission
             )
             crew_result = code_crew.kickoff(inputs={'flow_context': self.state.context})
             
@@ -304,7 +340,10 @@ class TerminalAssistantFlow(Flow[TerminalState]):
             workflow_crew = CrewFactory.create_workflow_crew(
                 command=self._current_command,
                 workflow_type='multi_step', # Example
-                current_directory=os.getcwd()
+                current_directory=self.state.cwd, # Use self.state.cwd
+                # Pass location context
+                current_location=self.state.current_location if self.state.location_permission != "denied" else None,
+                location_permission=self.state.location_permission
             )
             crew_result = workflow_crew.kickoff(inputs={'flow_context': self.state.context})
             
@@ -331,7 +370,10 @@ class TerminalAssistantFlow(Flow[TerminalState]):
             # Create system monitoring crew
             monitoring_crew = CrewFactory.create_system_monitoring_crew(
                 command=self._current_command,
-                monitoring_type='system_info' # Example
+                monitoring_type='system_info', # Example
+                # Pass location context if needed
+                current_location=self.state.current_location if self.state.location_permission != "denied" else None,
+                location_permission=self.state.location_permission
             )
             crew_result = monitoring_crew.kickoff(inputs={'flow_context': self.state.context})
             
@@ -365,7 +407,119 @@ class TerminalAssistantFlow(Flow[TerminalState]):
             'clarification_needed': True # Flag for the calling system
         }
 
-    @listen(or_('handle_simple_query', 'delegate_to_file_crew', 'delegate_to_code_crew', 'delegate_to_web_crew', 'handle_complex_query', 'handle_system_introspection', 'handle_code_analysis', 'handle_multi_step_workflow', 'handle_system_monitoring', 'needs_clarification'))
+    @listen('set_location')
+    def handle_set_location(self) -> Dict[str, Any]:
+        """Handles setting the user's current location."""
+        command_lower = self._current_command.lower()
+        address_part = command_lower.replace("set my location to ", "").replace("set location to ", "").strip()
+
+        if not address_part:
+            response = "Please specify an address or city to set your location. For example: 'set my location to New York City'."
+        else:
+            # In a real system, you'd geocode address_part to lat/lon.
+            # For now, we'll store the address directly and simulate lat/lon.
+            new_loc = LocationData(address=address_part, latitude=0.0, longitude=0.0) # Placeholder lat/lon
+            
+            # Update state directly via self.state, which is an instance of TerminalState
+            self.state.current_location = new_loc
+            if self.state.location_permission == "denied": # If user sets location, grant session permission
+                self.state.location_permission = "session"
+            
+            response = f"Okay, I've set your current location to '{address_part}'. I'll remember this for the current session."
+        
+        return {
+            'command': self._current_command,
+            'result': response,
+            'intent': 'set_location_result',
+            'timestamp': self._current_timestamp
+        }
+
+    @listen('add_named_location')
+    def handle_add_named_location(self) -> Dict[str, Any]:
+        """Handles adding a named location like 'home' or 'work'."""
+        command_lower = self._current_command.lower()
+        # e.g., "add location New York City as home"
+        try:
+            parts = command_lower.replace("add location ", "").split(" as ")
+            address_part = parts[0].strip()
+            name_part = parts[1].strip()
+
+            if not address_part or not name_part:
+                raise ValueError("Invalid format")
+
+            # Simulate geocoding
+            new_named_loc = LocationData(address=address_part, latitude=0.0, longitude=0.0) # Placeholder
+            
+            self.state.named_locations[name_part] = new_named_loc
+            response = f"Okay, I've saved '{address_part}' as '{name_part}'."
+
+        except (IndexError, ValueError):
+            response = "To add a named location, please use the format: 'add location [address/city] as [name]' (e.g., 'add location 123 Main St as home')."
+        
+        return {
+            'command': self._current_command,
+            'result': response,
+            'intent': 'add_named_location_result',
+            'timestamp': self._current_timestamp
+        }
+
+    @listen('get_location_info')
+    def handle_get_location_info(self) -> Dict[str, Any]:
+        """Handles queries that require location, like 'where am I' or 'restaurants near me'."""
+        command_lower = self._current_command.lower()
+
+        if self.state.location_permission == "denied" and not self.state.current_location:
+            response = "I need to know your location to help with that. You can say 'set my location to [city/address]' or allow location access if your terminal supports it."
+            return {
+                'command': self._current_command,
+                'result': response,
+                'intent': 'location_needed',
+                'timestamp': self._current_timestamp
+            }
+
+        if command_lower in ["where am i?", "what is my current location?", "show my location"]:
+            if self.state.current_location and self.state.current_location.address:
+                response = f"Your current location is set to: {self.state.current_location.address}."
+                if self.state.current_location.latitude is not None:
+                     response += f" (Lat: {self.state.current_location.latitude}, Lon: {self.state.current_location.longitude})"
+            elif self.state.current_location:
+                 response = f"Your current location is set (Lat: {self.state.current_location.latitude}, Lon: {self.state.current_location.longitude}), but I don't have a specific address."
+            else: # Should be caught by the permission check above, but as a fallback
+                response = "I don't have your current location set."
+            return {
+                'command': self._current_command,
+                'result': response,
+                'intent': 'current_location_report',
+                'timestamp': self._current_timestamp
+            }
+        
+        # For "near me" type queries, delegate to web_crew with location context
+        # The actual search logic will be in the WebResearcher agent/tools
+        from .crew_factories import CrewFactory
+        try:
+            # Ensure location data is passed to the crew
+            web_crew = CrewFactory.create_research_crew(
+                query=self._current_command, # The original command like "restaurants near me"
+                current_location=self.state.current_location, # Pass the LocationData object
+                location_permission=self.state.location_permission
+            )
+            crew_result = web_crew.kickoff(inputs={'flow_context': self.state.context})
+            
+            return {
+                'command': self._current_command,
+                'result': crew_result,
+                'intent': self._current_intent, # Keep original intent for now
+                'timestamp': self._current_timestamp
+            }
+        except Exception as e:
+            return {
+                'command': self._current_command,
+                'result': f"Error in location-based search: {str(e)}",
+                'intent': self._current_intent,
+                'timestamp': self._current_timestamp
+            }
+
+    @listen(or_('handle_simple_query', 'delegate_to_file_crew', 'delegate_to_code_crew', 'delegate_to_web_crew', 'handle_complex_query', 'handle_system_introspection', 'handle_code_analysis', 'handle_multi_step_workflow', 'handle_system_monitoring', 'needs_clarification', 'set_location', 'get_location_info', 'add_named_location'))
     def format_response(self, result: Dict[str, Any]) -> Dict[str, Any]:
         """Format and structure the final response"""
         formatted_response = self._format_terminal_response(result)
@@ -378,7 +532,7 @@ class TerminalAssistantFlow(Flow[TerminalState]):
     def _update_state_from_crew_result(self, crew_result: Any) -> None:
         """Update state based on crew execution results"""
         # Extract CWD changes if present
-        if hasattr(crew_result, 'cwd_update'):
+        if hasattr(crew_result, 'cwd_update') and os.path.isdir(crew_result.cwd_update):
             self.state.cwd = crew_result.cwd_update
         
         # Extract any context updates
@@ -415,6 +569,12 @@ class TerminalAssistantFlow(Flow[TerminalState]):
 - `cd [directory]` - Change current working directory
 - `cat [file]` - Display file contents
 - `find [pattern]` - Search for files by pattern
+
+## Location Commands
+- `set my location to [city/address]` - Set your current location for the session.
+- `add location [city/address] as [name]` - Save a location with a name (e.g., 'home', 'work').
+- `where am i?` - Display your currently set location.
+- Use location in queries: "restaurants near me", "weather in [named_location]", etc.
 
 ## Code Execution Commands
 - `python [file.py]` - Run Python file

@@ -1,52 +1,71 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
-Direct runner for CodexSimulator using Python 3.12 environment.
-This ensures we're using the correct Python version.
+Python 3.12 direct runner for the CodexSimulator terminal assistant.
+This bypasses potential Python version and module import issues.
 """
 import sys
 import os
 import subprocess
+import platform
+import site
 from pathlib import Path
 
-def check_python312_environment():
-    """Check if we're in the Python 3.12 environment"""
-    if sys.version_info.major != 3 or sys.version_info.minor != 12:
-        return False
+def get_python312_path():
+    """Try to find Python 3.12 in the virtual environment or system"""
+    # Check the current virtual environment first if we're in one
+    if hasattr(sys, 'real_prefix') or (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix):
+        # We're in a virtual environment
+        if sys.version_info.major == 3 and sys.version_info.minor >= 12:
+            return sys.executable
+        else:
+            venv_path = Path(sys.prefix)
+            possible_python_paths = [
+                venv_path / "bin" / "python3.12",
+                venv_path / "bin" / "python312",
+                venv_path / "bin" / "python3"
+            ]
+            for path in possible_python_paths:
+                if path.exists():
+                    return str(path)
     
-    # Check if we're in the right virtual environment
-    venv_path = Path(__file__).parent / ".venv312"
-    if venv_path.exists():
-        current_prefix = Path(sys.prefix)
-        expected_prefix = venv_path.resolve()
-        return current_prefix == expected_prefix
-    return False
+    # Check system paths
+    if platform.system() == "Windows":
+        return "python"  # Assume 'python' command is available and points to Python 3.12
+    else:
+        # Try standard Unix paths
+        for cmd in ["python3.12", "python312", "python3"]:
+            try:
+                result = subprocess.run(["which", cmd], capture_output=True, text=True)
+                if result.returncode == 0 and result.stdout.strip():
+                    return result.stdout.strip()
+            except:
+                pass
+    
+    # Last resort, try the current Python
+    return sys.executable
 
 def activate_python312_and_run():
     """Activate Python 3.12 environment and run the assistant"""
-    project_root = Path(__file__).parent
-    venv_path = project_root / ".venv312"
+    python_path = get_python312_path()
+    print(f"🔍 Checking Python 3.12 environment...")
     
-    if not venv_path.exists():
-        print("❌ Python 3.12 environment not found!")
-        print("Please run: python setup_python312_env.py")
+    # Verify Python version
+    try:
+        version_check = subprocess.run([python_path, "--version"], 
+                                      capture_output=True, text=True)
+        version_str = version_check.stdout.strip()
+        print(f"✅ Running in {version_str}")
+    except Exception as e:
+        print(f"❌ Error checking Python version: {e}")
         return False
     
-    if os.name == 'nt':  # Windows
-        python_path = venv_path / "Scripts" / "python"
-        activate_script = venv_path / "Scripts" / "activate"
-    else:  # Unix/Linux/macOS
-        python_path = venv_path / "bin" / "python"
-        activate_script = venv_path / "bin" / "activate"
+    # Prepare environment variables
+    env = os.environ.copy()
+    src_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'src')
+    env["PYTHONPATH"] = src_path + os.pathsep + env.get("PYTHONPATH", "")
     
-    print("🚀 Starting CodexSimulator with Python 3.12...")
-    
-    # Run the main application
+    # Run terminal assistant with flow orchestration
     try:
-        # Set environment variables for the subprocess
-        env = os.environ.copy()
-        env['PYTHONPATH'] = str(project_root / "src")
-        
-        # Execute the main script
         subprocess.run([
             str(python_path), 
             "-c", 
@@ -67,30 +86,11 @@ run_terminal_assistant_with_flows()
     
     return True
 
-def main():
-    """Main entry point"""
-    print("🔍 Checking Python 3.12 environment...")
-    
-    if check_python312_environment():
-        print("✅ Running in Python 3.12 environment")
-        # Add src to path
-        src_path = Path(__file__).parent / "src"
-        if str(src_path) not in sys.path:
-            sys.path.insert(0, str(src_path))
-        
-        try:
-            from codex_simulator.main import run_terminal_assistant_with_flows
-            run_terminal_assistant_with_flows()
-        except ImportError as e:
-            print(f"❌ Import error: {e}")
-            print("Try running: python setup_python312_env.py")
-        except KeyboardInterrupt:
-            print("\n👋 Goodbye!")
-        except Exception as e:
-            print(f"❌ Error: {e}")
-    else:
-        print("⚠️  Not in Python 3.12 environment, switching...")
-        activate_python312_and_run()
-
 if __name__ == "__main__":
-    main()
+    success = activate_python312_and_run()
+    if not success:
+        print("\nTry these troubleshooting steps:")
+        print("1. Make sure Python 3.12 is installed")
+        print("2. Run: python -m pip install -e .")
+        print("3. Try again: python run_direct_py312.py")
+        sys.exit(1)

@@ -660,3 +660,37 @@ You can also use natural language queries like:
 - "Find files containing the word 'test'"
 """
         return commands_info
+
+    def create_report_crew(self) -> Crew:
+        """Creates a specialized crew just for report generation, 
+        avoiding terminal-specific tasks"""
+        researcher_agent = self.researcher()
+        reporting_agent = self.reporting_analyst()
+        
+        # Create research task that doesn't rely on terminal-specific variables
+        research_task = Task(
+            description=f"Conduct thorough research on the topic: '{{topic}}'.\n"
+                       f"Identify key developments, current trends, significant factual information, "
+                       f"and notable opinions or analyses.\n"
+                       f"Ensure information is relevant to the current year: {{current_year}}.",
+            expected_output="A concise, well-organized list of 10-15 bullet points summarizing the most relevant findings",
+            agent=researcher_agent
+        )
+        
+        # Create reporting task that doesn't rely on terminal-specific variables
+        reporting_task = Task(
+            description=f"Based on the research findings about '{{topic}}', "
+                       f"create a comprehensive and well-structured report.\n"
+                       f"Expand each key finding into a detailed section, providing supporting information, "
+                       f"analysis, and examples where appropriate.",
+            expected_output="A fully fledged report in clean markdown format",
+            agent=reporting_agent,
+            output_file='report.md'
+        )
+        
+        return Crew(
+            agents=[researcher_agent, reporting_agent],
+            tasks=[research_task, reporting_task],
+            process=Process.sequential,
+            verbose=True
+        )
