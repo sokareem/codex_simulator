@@ -398,18 +398,28 @@ class CodexSimulator():
             # Extract response from flow result
             if isinstance(flow_result, dict):
                 if flow_result.get('clarification_needed'):
-                    # Return a special prefix and the clarification question
-                    return f"CLARIFICATION_REQUEST:{flow_result.get('response', 'Please clarify your command.')}"
+                    # Ensure clarification requests are passed clearly
+                    return f"CLARIFICATION_REQUEST:{flow_result.get('response', 'Please provide more details.')}"
                 
-                response = flow_result.get('response', 'Flow execution completed')
+                response = flow_result.get('response', 'Flow execution completed without a specific response.')
                 # Update state based on command execution
                 self._update_state_from_flow_result(flow_result, command)
                 return response
+            elif isinstance(flow_result, str):
+                # Handle cases where flow might return a simple string
+                self._update_state_from_flow_result({'response': flow_result}, command)
+                return flow_result
             else:
-                return str(flow_result)
+                # Fallback for unexpected flow_result types
+                unknown_response = f"Flow execution resulted in an unexpected data type: {type(flow_result)}. Result: {str(flow_result)}"
+                self._update_state_from_flow_result({'response': unknown_response}, command)
+                return unknown_response
         except Exception as e:
             # Graceful fallback to crew-only mode
-            print(f"Flow execution failed, falling back to crew mode: {e}")
+            error_message = f"Flow execution failed for command '{command}'. Error: {str(e)}. Falling back to crew-only mode."
+            print(error_message)
+            # Log this specific error to CLAUDE.md before falling back
+            self._update_claude_md(command, f"FLOW_ERROR: {error_message}\nFALLING_BACK_TO_CREW_MODE")
             return self._run_with_crew_only(command)
     
     def _update_state_from_flow_result(self, flow_result: Dict, command: str):
@@ -426,6 +436,9 @@ class CodexSimulator():
             new_cwd = self._state.extract_cwd_from_response(flow_result['response'])
             if new_cwd:
                 self.cwd = new_cwd
+            # Ensure CLAUDE.md is updated even if CWD didn't change in this specific response
+            elif 'response' in flow_result: # Ensure there's a response to log
+                self._update_claude_md(command, flow_result['response'])
 
     def _create_knowledge_sources(self):
         """Create knowledge sources for agents - return None to avoid validation issues"""
@@ -520,7 +533,7 @@ class CodexSimulator():
             self._update_claude_md(command, result)
             return result
         except Exception as e:
-            error_result = f"Error processing command: {str(e)}"
+            error_result = f"Error processing command '{command}': {str(e)}. Please check the command syntax or try rephrasing."
             self._update_claude_md(command, error_result)
             return error_result
 
@@ -540,11 +553,14 @@ class CodexSimulator():
 
     def _load_user_context(self) -> str:
         """Load user preferences context"""
-        user_context = "No user context available"
+        user_context = "No user context available. User preferences can be set in 'knowledge/user_preference.txt'."
         try:
-            if os.path.exists("knowledge/user_preference.txt"):
-                with open("knowledge/user_preference.txt", "r") as f:
-                    user_context = f.read()
+            user_pref_path = PROJECT_ROOT / "knowledge" / "user_preference.txt"
+            if user_pref_path.exists():
+                with open(user_pref_path, "r") as f:
+                    user_context_content = f.read().strip()
+                    if user_context_content:
+                        user_context = user_context_content
         except Exception as e:
             print(f"Warning: Could not load user preferences: {e}")
         return user_context
@@ -552,7 +568,7 @@ class CodexSimulator():
     def _load_claude_context(self) -> str:
         """Load CLAUDE.md context"""
         claude_context = ""
-        claude_md_path = os.path.join(self.cwd, "CLAUDE.md")
+        claude_md_path = os.path.join(self.cwd, "CLAUDE.md") # Ensure CWD is used
         if os.path.exists(claude_md_path):
             try:
                 with open(claude_md_path, "r", encoding="utf-8") as f:
@@ -563,23 +579,27 @@ class CodexSimulator():
 
     def _ensure_claude_md_exists(self):
         """Ensure that CLAUDE.md file exists in the current directory."""
-        claude_md_path = os.path.join(self.cwd, "CLAUDE.md")
+        claude_md_path = os.path.join(self.cwd, "CLAUDE.md") # Ensure CWD is used
         if not os.path.exists(claude_md_path):
             # Create initial CLAUDE.md with enhanced structure
+            initial_content = (
+                f"# Claude Memory File\n\n"
+                f"Created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+                f"Initial Working Directory: {self.cwd}\n\n"
+                f"## Context\n\n"
+                f"This file serves as shared memory for the Claude Terminal Assistant.\n"
+                f"It tracks command history and maintains context between sessions.\n"
+                f"User preferences can be configured in 'knowledge/user_preference.txt'.\n\n"
+                f"## Directory Information\n\n"
+                f"Current Working Directory: {self.cwd}\n\n"
+                f"## Command History\n\n"
+            )
             with open(claude_md_path, "w", encoding="utf-8") as f:
-                f.write(f"# Claude Memory File\n\n"
-                       f"Created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
-                       f"Current Working Directory: {self.cwd}\n\n"
-                       f"## Context\n\n"
-                       f"This file serves as shared memory for the Claude Terminal Assistant.\n"
-                       f"It tracks command history and maintains context between sessions.\n\n"
-                       f"## Directory Information\n\n"
-                       f"Current Working Directory: {self.cwd}\n\n"
-                       f"## Command History\n\n")
+                f.write(initial_content)
 
     def _update_claude_md(self, command: str, result: str):
         """Update the CLAUDE.md file with enhanced formatting"""
-        claude_md_path = os.path.join(self.cwd, "CLAUDE.md")
+        claude_md_path = os.path.join(self.cwd, "CLAUDE.md") # Ensure CWD is used
         # Read existing content
         existing_content = ""
         try:

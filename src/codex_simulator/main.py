@@ -119,12 +119,11 @@ def run_terminal_assistant_with_flows(show_warning=True):
             result = simulator.terminal_assistant(command)
             
             if result.startswith("CLARIFICATION_REQUEST:"):
-                clarification_question = result.replace("CLARIFICATION_REQUEST:", "", 1)
-                print(f"\n⚠️ {clarification_question}")
-                # Optionally, you could loop here to get clarification immediately
-                # or just let the user provide a new, more detailed command next.
+                clarification_question = result.replace("CLARIFICATION_REQUEST:", "", 1).strip()
+                print(f"\n🤔 Assistant needs clarification: {clarification_question}")
+                print("   Please rephrase your command or provide more details.")
             else:
-                print(f"\n✅ {result}")
+                print(f"\n✅ Result:\n{result}")
             
         except KeyboardInterrupt:
             print("\n👋 Goodbye!")

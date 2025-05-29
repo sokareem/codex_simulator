@@ -45,6 +45,85 @@ CodexSimulator is an advanced terminal assistant built on the CrewAI framework t
 5. Results are formatted and returned to the terminal
 6. State is updated based on execution results (e.g., directory changes)
 
+## Global Installation and Usage
+
+The CodexSimulator terminal assistant can be installed globally on your system, allowing you to use it from any directory without navigating to the project folder first.
+
+### Installation Instructions
+
+1. Clone the repository to your local machine:
+   ```
+   git clone https://github.com/yourusername/codex_simulator.git
+   cd codex_simulator
+   ```
+
+2. Run the global installation script:
+   ```
+   chmod +x install_globally.sh
+   ./install_globally.sh
+   ```
+
+3. The script will:
+   - Check your Python environment
+   - Install required dependencies
+   - Create global command aliases
+   - Set up necessary paths and permissions
+
+4. After installation, you can run the terminal assistant from anywhere using one of these commands:
+   - `codex-terminal` - Convenience command (recommended)
+   - `terminal_flows` - Run with flow orchestration
+   - `terminal_assistant` - Run in basic mode
+   - `hybrid_mode` - Run with automatic mode selection
+
+### New Location Features
+
+The terminal assistant now supports location-aware features:
+
+1. **Setting Your Location**:
+   - `set my location to San Francisco` - Sets your current location for the session
+   - `add location New York as work` - Saves a named location for future reference
+
+2. **Using Location in Queries**:
+   - `find coffee shops near me` - Uses your current location
+   - `what's the weather in [named_location]` - Uses a saved location
+   - `restaurants near work` - References a named location
+
+3. **Managing Location Permissions**:
+   - Your location is only stored for the current session by default
+   - Permission levels: "denied", "session", or "always"
+   - You can check your current location with `where am I?`
+
+### How to Effectively Prompt the Terminal Assistant
+
+To get the most out of the terminal assistant, consider these guidelines:
+
+1. **Be Specific**:
+   - Instead of: "Find files"
+   - Better: "Find Python files containing the word 'delegation' in the src directory"
+
+2. **Use Natural Language or Command Syntax**:
+   - Natural: "Show me all Python files in the current directory"
+   - Command: `find . -name "*.py"`
+   - Both styles work equally well
+
+3. **For Complex Tasks, Break Them Down**:
+   - "Create a directory called 'data', download the CSV file from this URL, then analyze it"
+   - The system will handle the step-by-step process
+
+4. **Location-Aware Queries**:
+   - Always set your location first: "set my location to Chicago"
+   - Then make location-based queries: "find theaters near me"
+
+5. **Asking for Explanations**:
+   - "Explain how the delegation mechanism works"
+   - "How does your system maintain state between commands?"
+
+6. **Getting Help**:
+   - Type `help` or `commands` to see available commands
+   - Ask "What can you do?" for an overview of capabilities
+
+### Example Session
+
 ## Project Progress Log
 
 ### 2023-08-16 14:30:00
@@ -114,138 +193,80 @@ Commands follow this execution path:
 
 ## Command History
 
-### 2025-05-28 23:30:10
+### 2025-05-29 02:56:57
 
-**Command:** `find restaurants near me`
-
-**Working Directory:** `/Users/sinmi/Projects/codex_simulator`
-
-**Result:**
-
-```
-Here are some resources for restaurants near Chicago, Illinois:
-
-*   [The Best Restaurants in Chicago Right Now | OpenTable](https://www.opentable.com/region/chicago/chicago-restaurants)
-*   [Chicago Restaurants | Food & Drink | Restaurants & Bars in Chicago | Choose Chicago](https://www.choosechicago.com/things-to-do/food-drink/)
-*   [Chicago MICHELIN Restaurants - The MICHELIN Guide USA](https://guide.michelin.com/us/en/illinois/chicago/restaurants)
-*   [THE 10 BEST Restaurants in Chicago (Updated May 2025)](https://www.tripadvisor.com/Restaurants-g35805-Chicago_Illinois.html)
-*   [Eater Chicago](https://chicago.eater.com)
-```
-
- 2025-05-28 23:15:45
-
-**Command:** `what's my current GPS location tell me the coordinates`
+**Command:** `can you explain how your flow execution works based of of the content of the code? You currently are living within the directory of your source code that gives you all the tools you need to function and operate it also has all the agents you're operating and how it can be optimized. I have to say your performance has been pretty spectacular so far, but to take you to the next level, we need to embrace new concepts`
 
 **Working Directory:** `/Users/sinmi/Projects/codex_simulator`
 
 **Result:**
 
 ```
-I am sorry, I am unable to directly determine your current GPS location. I do not have the functionality to access your location.
+```
+The AI assistant's flow execution works as follows:
+
+1.  **Initialization:** The system loads environment variables and creates an instance of the `CodexSimulator` class.
+2.  **Command Handling:** The user's command is passed to the `terminal_assistant` function.
+3.  **Flow Execution (`_run_with_flow`):** If `flow_enabled` is True, the command is passed to `TerminalAssistantFlow`. The flow processes the command and returns a result.
+4.  **Crew Execution (`_run_with_crew_only`):** If `flow_enabled` is False or flow execution fails, the `_run_with_crew_only` method is used. The command is added to the command history, and the CLAUDE.md file is ensured. User and CLAUDE context are loaded. If the command is a help request or a directory change (`cd`), it is handled directly. Otherwise, the `_create_terminal_crew` method creates a crew of agents. The crew is run, and the result is processed. The CWD is updated if necessary, and the CLAUDE.md file is updated.
+5.  **Agent & Tool Interaction:** The `_create_terminal_crew` method sets up the agents: `terminal_commander`, `file_navigator`, `code_executor`, and `web_researcher`. The `terminal_commander` is the manager, and the other agents are specialists. The `terminal_commander` agent uses the `DelegateTool` to delegate tasks to the specialist agents. Specialist agents use their respective tools to perform the requested operations.
+
+The system already incorporates several optimization strategies, including caching, modular design, error handling, context management, and Python 3.12 support.
+
+To further optimize the system, the following areas could be explored:
+
+*   Flow Optimization
+*   Agent Performance
+*   LLM Selection
+*   Parallel Execution
+*   Complexity Assessment
+*   Resource Management
+*   Tool Optimization
+*   Performance Monitoring
+```
 ```
 
- 2025-05-28 23:14:59
+ 2025-05-29 02:55:21
 
-**Command:** `what's my current location?`
+**Command:** `can you explain how your flow execution works based of of the content of the code? You currently are living within the directory of your source code that gives you all the tools you need to function and operate it also has all the agents you're operating and how it can be optimized. I have to say your performance has been pretty spectacular so far, but to take you to the next level, we need to embrace new concepts`
 
 **Working Directory:** `/Users/sinmi/Projects/codex_simulator`
 
 **Result:**
 
 ```
-Your current location is /Users/sinmi/Projects/codex_simulator.
+FLOW_ERROR: Flow execution failed for command 'can you explain how your flow execution works based of of the content of the code? You currently are living within the directory of your source code that gives you all the tools you need to function and operate it also has all the agents you're operating and how it can be optimized. I have to say your performance has been pretty spectacular so far, but to take you to the next level, we need to embrace new concepts'. Error: name 'datetime' is not defined. Falling back to crew-only mode.
+FALLING_BACK_TO_CREW_MODE
 ```
 
- 2025-05-28 23:09:38
+ 2025-05-29 02:51:56
 
-**Command:** `what are the contents of my current directory? If you were to give a rough estimate on the total size of all files in this directory what would it be?`
+**Command:** `Tell me about the Netflix series "A Deadly American Marriage"`
 
 **Working Directory:** `/Users/sinmi/Projects/codex_simulator`
 
 **Result:**
 
 ```
-The contents of the current directory are:
-
-Directories:
-📁 .git/
-📁 .github/
-📁 .venv/
-📁 .venv312/
-📁 credentials/
-📁 knowledge/
-📁 src/
-📁 test_venv/
-📁 tests/
-
-Files:
-📄 .DS_Store (6.0 KB)
-📄 .env (435 B)
-📄 .gitignore (363 B)
-📄 =2.4.2 (0 B)
-📄 CLAUDE.md (53.2 KB)
-📄 README.md (2.4 KB)
-📄 activate_py312.sh (721 B)
-📄 check_environment.py (3.7 KB)
-📄 check_python_compatibility.py (2.6 KB)
-📄 create_symlink.sh (932 B)
-📄 debug_env.py (1.7 KB)
-📄 fix_venv.sh (1.2 KB)
-📄 install_deps.py (5.0 KB)
-📄 install_deps_experimental.py (2.2 KB)
-📄 install_globally.sh (344 B)
-📄 pyproject.toml (1.1 KB)
-📄 requirements-test.txt (182 B)
-📄 requirements.txt (375 B)
-📄 run-tests.sh (3.4 KB)
-📄 run_direct.py (4.3 KB)
-📄 run_direct_py312.py (3.0 KB)
-📄 run_tests.py (448 B)
-📄 setup.py (687 B)
-📄 setup_and_run.sh (786 B)
-📄 setup_python312_env.py (8.5 KB)
-📄 test_imports.py (1.4 KB)
-📄 test_search.py (2.4 KB)
-📄 uv.lock (293.7 KB)
-
-The total size of all files in the current directory is approximately 1.1 GB.
+The Netflix series "A Deadly American Marriage" is a documentary that explores the killing of Jason Corbett. The plot revolves around the dispute between Jason Corbett, his wife Molly Martens, and her father, Tom Martens. Molly and Tom claim self-defense. The cast includes Jones Byrd, Jason Corbett (archive footage), Molly Martens Corbett (archive footage), Madison Forsey (archive footage), Doug Kingsbery, David Lynch, Jack Corbett Lynch, Sarah Corbett Lynch, Tracey Lynch, Thomas Martens, Tom Martens, Alan Martin, Wanda Thompson, and Jay Vannoy. The series has a 6.6/10 rating on IMDb. Reviews describe it as a compelling true crime documentary. The series is directed by Jessica Burgess and Jenny Popplewell. The release date for all 16 episodes is July 31, 2024.
 ```
 
- 2025-05-28 23:02:06
+ 2025-05-29 02:51:43
 
-**Command:** `\what do you understand infinity to be?`
+**Command:** `Tell me about the Netflix series "A Deadly American Marriage"`
 
 **Working Directory:** `/Users/sinmi/Projects/codex_simulator`
 
 **Result:**
 
 ```
-Infinity is a multifaceted concept representing something without bound, limit, or end.
-
-**Mathematical Perspective:** In mathematics, infinity is often treated as a concept that extends beyond any real or natural number. It's not a number itself, but rather an idea denoting something that is unlimited. This concept is used in various areas, such as the number line extending infinitely in both directions and in calculus to describe limits that approach infinity. Mathematical treatments of infinity also involve the idea of different "sizes" of infinity, as explored in set theory.
-
-**Philosophical Perspective:** Philosophically, infinity has been explored since antiquity, with discussions on the nature of the infinite, the Absolute, and God. It has been a central topic in metaphysics and cosmology. Philosophers have debated the nature of infinity in relation to the universe, time, and existence. Concepts like "the Boundless" in Greek philosophy, as well as considerations in theology, explore infinity's implications.
+FLOW_ERROR: Flow execution failed for command 'Tell me about the Netflix series "A Deadly American Marriage"'. Error: name 'datetime' is not defined. Falling back to crew-only mode.
+FALLING_BACK_TO_CREW_MODE
 ```
 
- 2025-05-28 23:01:01
+ 2025-05-29 02:48:23
 
-**Command:** `Set my location to 'Tokyo'. If I then ask for 'local parks', and then later set my location to 'a specific address in Kyoto', how does the system handle the change in location granularity for subsequent 'local parks' queries?`
-
-**Working Directory:** `/Users/sinmi/Projects/codex_simulator`
-
-**Result:**
-
-```
-The system handles changes in location granularity as follows:
-
-1.  **Initial Location (Tokyo):** When the user sets the location to "Tokyo" and asks for "local parks," the system uses "Tokyo" as the location filter. It queries a location-based service or database to find parks within Tokyo.
-2.  **Refined Location (Kyoto Address):** When the user refines the location to a specific address in "Kyoto," the system updates its internal location context to this more specific point.
-3.  **Subsequent "local parks" query:** When the user asks "local parks" again, the system uses the *updated* location context (the specific address in Kyoto) to filter the results. The location-based service is queried with the specific address, returning parks near that address. The system adapts to the finer-grained location data, providing more relevant results.
-```
-
- 2025-05-28 23:00:32
-
-**Command:** `This is my first time using a location-based command. If I ask, 'find coffee shops near me', what explanation do you offer about location usage and privacy before proceeding?"`
+**Command:** `How do you scaffold learning if a user asks for help with a concept they partially understand?`
 
 **Working Directory:** `/Users/sinmi/Projects/codex_simulator`
 
@@ -302,518 +323,510 @@ You can also use natural language queries like:
 
 ```
 
- 2025-05-28 22:32:49
+ 2025-05-29 02:48:23
 
-**Command:** `Can you find movies showing today in Chicago near me`
-
-**Working Directory:** `/Users/sinmi/Projects/codex_simulator`
-
-**Result:**
-
-```
-I am unable to find movies showing today in Chicago near me, as I do not have the functionality to access real-time movie listings or location data.
-```
-
- 2025-05-28 22:32:20
-
-**Command:** `can you do that for me?`
+**Command:** `How do you scaffold learning if a user asks for help with a concept they partially understand?`
 
 **Working Directory:** `/Users/sinmi/Projects/codex_simulator`
 
 **Result:**
 
 ```
-I understand you want to: can you do that for me?
-
-I can help with file operations, code execution, and web searches. Could you break this down into more specific tasks?
+FLOW_ERROR: Flow execution failed for command 'How do you scaffold learning if a user asks for help with a concept they partially understand?'. Error: name 'datetime' is not defined. Falling back to crew-only mode.
+FALLING_BACK_TO_CREW_MODE
 ```
 
- 2025-05-28 22:32:03
+ 2025-05-29 02:47:35
 
-**Command:** `Research and Find  movies are showing in Cinemas in Chicago today`
+**Command:** `Can you assess the user’s skill level and adjust your explanations accordingly?`
 
 **Working Directory:** `/Users/sinmi/Projects/codex_simulator`
 
 **Result:**
 
 ```
-To find movies showing in Chicago cinemas today, you would typically use a search engine like Google or Bing, or a website dedicated to movie listings such as Fandango, or websites of individual cinema chains. You would search for "movies showing in Chicago today" or similar terms. These resources will provide showtimes, cinema locations, and movie information.
+Based on your profile as an AI Engineer, Systems Thinker, Philosopher, and Software Developer, your interest in AI agent workflows and jokes, and considering your command history, I assess your skill level as advanced. My explanations will be technical and detailed, assuming a solid understanding of AI and software development principles. I will avoid overly simplistic explanations and will aim to incorporate relevant and appropriate humor.
 ```
 
- 2025-05-28 22:31:28
+ 2025-05-29 02:47:24
 
-**Command:** `what movies are showing in Cinemas in Chicago today?`
+**Command:** `Can you assess the user’s skill level and adjust your explanations accordingly?`
 
 **Working Directory:** `/Users/sinmi/Projects/codex_simulator`
 
 **Result:**
 
 ```
-I understand you want to: what movies are showing in Cinemas in Chicago today?
-
-I can help with file operations, code execution, and web searches. Could you break this down into more specific tasks?
+FLOW_ERROR: Flow execution failed for command 'Can you assess the user’s skill level and adjust your explanations accordingly?'. Error: name 'datetime' is not defined. Falling back to crew-only mode.
+FALLING_BACK_TO_CREW_MODE
 ```
 
- 2025-05-28 22:30:32
+ 2025-05-29 02:45:34
 
-**Command:** `How does your system maintain state between commands? If I change directories now, will that change be remembered in future commands?`
+**Command:** `what directory am I in`
 
 **Working Directory:** `/Users/sinmi/Projects/codex_simulator`
 
 **Result:**
 
 ```
-## State Management System
-
-**Yes, directory changes and context are preserved between commands.**
-
-**State Components**:
-- **Current Working Directory**: Tracked via StateTracker, updated after cd commands
-- **Command History**: All commands stored in memory and CLAUDE.md
-- **Session Context**: Persistent across the terminal session
-- **CLAUDE.md File**: Shared memory file updated after each command
-
-**State Persistence Mechanisms**:
-1. **StateTracker Class**: Maintains in-memory state during session
-2. **Directory Tracking**: CWD changes detected from command responses and updated
-3. **Context Propagation**: Previous commands and results inform future operations
-4. **File-Based Memory**: CLAUDE.md serves as persistent memory between sessions
-
-**Example**: If you run `cd /tmp`, the next command will execute in /tmp context, and this change is remembered for all subsequent commands in the session.
+Current directory: /Users/sinmi/Projects/codex_simulator
 ```
 
- 2025-05-28 22:29:13
+ 2025-05-29 02:45:34
 
-**Command:** `How much free disk space is available on the current drive and how is it partitioned?`
+**Command:** `what directory am I in`
 
 **Working Directory:** `/Users/sinmi/Projects/codex_simulator`
 
 **Result:**
 
 ```
-To determine the free disk space and disk partitioning on macOS, you can use the following commands in the terminal:
-
-1.  **Free Disk Space:**
-    *   Open Terminal.
-    *   Type `df -H` and press Enter. This command will show disk space usage in a human-readable format. The "Available" column indicates the free space.
-
-2.  **Disk Partitioning:**
-    *   Open Terminal.
-    *   Type `diskutil list` and press Enter. This command will list all disks and their partitions, including sizes and types.
-
-These commands will provide the information requested. The current working directory is /Users/sinmi/Projects/codex_simulator, but these commands are system-level and do not depend on the current directory.
+FLOW_ERROR: Flow execution failed for command 'what directory am I in'. Error: name 'datetime' is not defined. Falling back to crew-only mode.
+FALLING_BACK_TO_CREW_MODE
 ```
 
- 2025-05-28 22:25:15
+ 2025-05-29 02:45:10
 
-**Command:** `If I gave you a complex task like 'analyze the performance of my Python script and suggest optimizations', walk me through exactly how you would delegate subtasks to your specialist agents`
+**Command:** `what are the current stock prices of BTC?`
 
 **Working Directory:** `/Users/sinmi/Projects/codex_simulator`
 
 **Result:**
 
 ```
-## Complex Task Delegation Example
-
-**Task**: "Analyze the performance of my Python script and suggest optimizations"
-
-**Delegation Workflow**:
-
-1. **Terminal Commander** receives request and breaks it down:
-   - Need to read the Python script
-   - Need to analyze performance characteristics  
-   - Need to identify optimization opportunities
-   - Need to provide actionable recommendations
-
-2. **Step 1 - File Analysis**:
-   - Delegate to **FileNavigator**: "Find Python files in current directory"
-   - Delegate to **FileNavigator**: "Read the contents of [script.py]"
-
-3. **Step 2 - Code Analysis**:
-   - Delegate to **CodeExecutor**: "Analyze this Python code for performance issues"
-   - Delegate to **CodeExecutor**: "Profile the script execution if safe to run"
-
-4. **Step 3 - Research**:
-   - Delegate to **WebResearcher**: "Find optimization techniques for [identified issues]"
-
-5. **Step 4 - Synthesis**:
-   - **Terminal Commander** combines all results
-   - Provides comprehensive analysis with specific recommendations
-   - Includes code examples and performance improvement estimates
-
-This demonstrates the system's ability to orchestrate multiple specialists for complex analytical tasks.
+The current price of Bitcoin (BTC) is approximately $108,000 - $108,850 USD as of May 28, 2025, according to multiple sources including Yahoo Finance, CoinMarketCap, and CoinDesk.
 ```
 
- 2025-05-28 22:16:26
+ 2025-05-29 02:45:06
 
-**Command:** `Compare and contrast the 'flow orchestration' vs. 'crew-only' modes in this system. When would you use each and why?`
+**Command:** `what are the current stock prices of BTC?`
 
 **Working Directory:** `/Users/sinmi/Projects/codex_simulator`
 
 **Result:**
 
 ```
-Based on the assumption that '/Users/sinmi/Projects/codex_simulator/documentation/architecture.md' describes 'flow orchestration' and '/Users/sinmi/Projects/codex_simulator/src/main.py' describes 'crew-only', here's a comparison:
-
-**Flow Orchestration:**
-
-*   **Description:** Likely involves a system where tasks are managed and coordinated through a central control mechanism or workflow engine. This could include the sequencing of tasks, handling dependencies, and managing the overall execution flow.
-*   **Use Cases:** Ideal for complex processes that require multiple steps, conditional branching, and automated task management. Examples might include data pipelines, deployment processes, or complex business workflows.
-*   **Advantages:**
-    *   Improved automation and efficiency.
-    *   Centralized control and monitoring.
-    *   Simplified management of complex processes.
-    *   Enhanced reliability through error handling and retries.
-*   **Disadvantages:**
-    *   Can introduce complexity in design and implementation.
-    *   May have performance overhead due to the orchestration layer.
-    *   Requires careful planning and design to avoid bottlenecks.
-
-**Crew-Only:**
-
-*   **Description:** This mode likely refers to a system where tasks are performed by a group of workers (a "crew") who operate independently, potentially with less centralized control or orchestration. This suggests a more decentralized or manual approach.
-*   **Use Cases:** Suited for tasks that are more ad-hoc, require human intervention, or where centralized control is not essential. Examples might include tasks that are less structured or require a high degree of flexibility.
-*   **Advantages:**
-    *   Greater flexibility and adaptability.
-    *   Potentially faster execution for simple tasks.
-    *   Reduced complexity compared to flow orchestration.
-    *   Well-suited for tasks requiring human judgment or interaction.
-*   **Disadvantages:**
-    *   Less automation and potentially lower efficiency.
-    *   Limited centralized control and monitoring.
-    *   May be more difficult to manage complex processes.
-    *   Higher risk of errors or inconsistencies.
-
-**When to use each:**
-
-*   **Flow Orchestration:** Use when you need to automate complex workflows, manage dependencies between tasks, and require centralized control and monitoring.
-*   **Crew-Only:** Use when tasks are simpler, require human intervention, or when flexibility and adaptability are prioritized over automation and centralized control.
+FLOW_ERROR: Flow execution failed for command 'what are the current stock prices of BTC?'. Error: name 'datetime' is not defined. Falling back to crew-only mode.
+FALLING_BACK_TO_CREW_MODE
 ```
 
- 2025-05-28 22:13:37
+ 2025-05-29 02:43:18
 
-**Command:** `Debug this code snippet: `def get_average(numbers): return sum(numbers)/len(numbers)`—what happens if numbers is an empty list?`
+**Command:** `Tell me about the history of Jazz in Chicago`
 
 **Working Directory:** `/Users/sinmi/Projects/codex_simulator`
 
 **Result:**
 
 ```
-The code snippet `def get_average(numbers): return sum(numbers)/len(numbers)` calculates the average of a list of numbers.  If the input `numbers` is an empty list, the `sum(numbers)` will return 0. However, `len(numbers)` will also be 0.  The code will then attempt to perform the division `0 / 0`.  Division by zero is undefined and will result in a `ZeroDivisionError` exception.
+The history of jazz in Chicago is a rich and vibrant story, deeply intertwined with the Great Migration of African Americans from the Southern United States to Chicago in the early 20th century. This migration brought a wave of musical talent, particularly from New Orleans, which significantly shaped the city's jazz scene.
+
+The 1920s marked a golden age for jazz in Chicago. The city became a haven for jazz musicians, offering opportunities for work in the vibrant nightlife, which included numerous clubs, cabarets, and dance halls, particularly on the South Side. This "Chicago style" of jazz evolved, characterized by a driving, up-tempo beat, the increased use of the saxophone, and a greater emphasis on solo improvisation, while also incorporating elements of ragtime and blues.
+
+Chicago's industrial might and its attraction of young workers from across the nation also played a role in its musical influence. The city's burgeoning recording industry helped foster the growth of jazz, and the city continues to play a leading role in the performance, recording, and artistic evolution of jazz throughout the twentieth century. The influence of Chicago jazz continues to be felt today.
 ```
 
- 2025-05-28 22:11:07
+ 2025-05-29 02:43:08
 
-**Command:** `Research the current weather in Chicago`
+**Command:** `Tell me about the history of Jazz in Chicago`
 
 **Working Directory:** `/Users/sinmi/Projects/codex_simulator`
 
 **Result:**
 
 ```
-The current weather in Chicago, IL, as of May 28, 2024, at 10:11 PM, is 54°F and cloudy. The RealFeel is 56°. The wind is NNE at 2 mph, with gusts of 5 mph, and humidity is 91%. The forecast for Thursday includes stray showers with highs in the low 70s.
-Sources: Accuweather.com, ABC7 Chicago.
+FLOW_ERROR: Flow execution failed for command 'Tell me about the history of Jazz in Chicago'. Error: name 'datetime' is not defined. Falling back to crew-only mode.
+FALLING_BACK_TO_CREW_MODE
 ```
 
- 2025-05-28 22:10:36
+ 2025-05-29 02:42:29
 
-**Command:** `what's the current weather in Chicago?`
+**Command:** `How do I be the best man i can be?`
 
 **Working Directory:** `/Users/sinmi/Projects/codex_simulator`
 
 **Result:**
 
 ```
-I understand you want to: what's the current weather in Chicago?
+Here's a comprehensive guide on how to be a great best man:
 
-I can help with file operations, code execution, and web searches. Could you break this down into more specific tasks?
+**Responsibilities of a Best Man:**
+
+*   **Before the Wedding:**
+    *   **Offer Emotional Support:** Be a sounding board for the groom, especially during stressful wedding planning.
+    *   **Bachelor Party:** Plan and organize the bachelor party. This includes choosing a date, venue, activities, and managing the budget.
+    *   **Groomsmen Coordination:** Help the groom select and coordinate attire for the groomsmen (suits, tuxedos, etc.).
+    *   **Guest Coordination:** Coordinate travel and accommodations for the groomsmen, if needed.
+    *   **Wedding Tasks:** Offer assistance with any other wedding-related tasks the groom may need help with (e.g., assembling favors, addressing invitations).
+    *   **Rehearsal:** Attend and participate in the rehearsal and rehearsal dinner.
+*   **On the Wedding Day:**
+    *   **Assist the Groom:** Help the groom get ready and ensure he's on time.
+    *   **Oversee Groomsmen:** Make sure the groomsmen are punctual and in the correct place.
+    *   **Keep the Rings Safe:** Be responsible for the wedding rings until the ceremony.
+    *   **Sign the Marriage License:** Be a witness and sign the marriage license.
+    *   **Give a Speech:** Deliver a well-prepared and heartfelt speech at the reception.
+    *   **Toast:** Propose a toast to the bride and groom.
+    *   **Reception Duties:** Assist with any reception-related tasks as needed (e.g., directing guests, helping with gifts).
+*   **After the Wedding:**
+    *   **Return Rentals:** Return the groom's tuxedo or any other rented items.
+    *   **Help with Cleanup:** Offer assistance with post-wedding cleanup.
+
+**Qualities of a Good Best Man:**
+
+*   **Reliability:** Be someone the groom can depend on.
+*   **Organization:** Be able to plan and manage tasks effectively.
+*   **Responsibility:** Take your duties seriously and follow through.
+*   **Supportive:** Be a source of encouragement and positivity for the groom.
+*   **Trustworthy:** Handle confidential information with discretion.
+*   **Good Public Speaker:** Be comfortable speaking in front of a crowd.
+*   **Friendly and Approachable:** Interact well with guests and other members of the wedding party.
+*   **Proactive:** Anticipate the groom's needs and take initiative.
+
+**Advice and Guidance:**
+
+*   **Communicate:** Stay in regular communication with the groom throughout the planning process.
+*   **Listen:** Be a good listener and offer support when the groom needs it.
+*   **Plan Ahead:** Start planning the bachelor party and speech well in advance.
+*   **Know the Groom:** Tailor your speech to reflect your relationship with the groom and his personality.
+*   **Be Prepared:** Have a backup plan for any potential issues on the wedding day.
+*   **Stay Calm:** Remain composed and help the groom stay calm, especially if things don't go as planned.
+*   **Enjoy Yourself:** Remember to have fun and celebrate the groom and his partner.
+*   **Ask for Help:** Don't hesitate to ask the other groomsmen or the wedding party for help.
+*   **Respect Boundaries:** Be mindful of the couple's wishes and preferences throughout the process.
+*   **Focus on the Couple:** Remember that the wedding is about celebrating the bride and groom; your role is to support them.
 ```
 
- 2025-05-28 22:09:03
+ 2025-05-29 02:42:07
 
-**Command:** `How does your system maintain state between commands? If I change directories now, will that change be remembered in future commands?`
+**Command:** `How do I be the best man i can be?`
 
 **Working Directory:** `/Users/sinmi/Projects/codex_simulator`
 
 **Result:**
 
 ```
-## State Management System
-
-**Yes, directory changes and context are preserved between commands.**
-
-**State Components**:
-- **Current Working Directory**: Tracked via StateTracker, updated after cd commands
-- **Command History**: All commands stored in memory and CLAUDE.md
-- **Session Context**: Persistent across the terminal session
-- **CLAUDE.md File**: Shared memory file updated after each command
-
-**State Persistence Mechanisms**:
-1. **StateTracker Class**: Maintains in-memory state during session
-2. **Directory Tracking**: CWD changes detected from command responses and updated
-3. **Context Propagation**: Previous commands and results inform future operations
-4. **File-Based Memory**: CLAUDE.md serves as persistent memory between sessions
-
-**Example**: If you run `cd /tmp`, the next command will execute in /tmp context, and this change is remembered for all subsequent commands in the session.
+FLOW_ERROR: Flow execution failed for command 'How do I be the best man i can be?'. Error: name 'datetime' is not defined. Falling back to crew-only mode.
+FALLING_BACK_TO_CREW_MODE
 ```
 
- 2025-05-28 22:07:47
+ 2025-05-29 00:56:34
 
-**Command:** `How much free disk space is available on the current drive and how is it partitioned?`
+**Command:** `in order to become a better code terminal assistant tell me what you need to grow to be fed, nourished, sustained, to enable you to emerge to the code terminal assistant you're truly meant to be`
 
 **Working Directory:** `/Users/sinmi/Projects/codex_simulator`
 
 **Result:**
 
 ```
-I have delegated the task of finding the free disk space and disk partitioning information to the Terminal Command Orchestrator and AI Assistant. The current working directory is /Users/sinmi/Projects/codex_simulator. The Terminal Command Orchestrator and AI Assistant has indicated that it will use the `diskutil` command to get this information. I am unable to provide the specific output of the commands, as I do not have direct access to the file system or the ability to execute commands.
+Based on the analysis of the `README.md` and `crew.py` files, here are potential new features to enhance the AI assistant's functionality:
+
+1.  **Enhanced Command Parsing and Natural Language Understanding:**
+    *   **Description:** Improve the ability to understand and interpret complex natural language commands. This could involve using a more sophisticated natural language processing (NLP) model to parse user input, identify the user's intent, and extract relevant information. This would allow for more flexible and intuitive interaction.
+    *   **Implementation:** Integrate a library like spaCy or NLTK for advanced NLP tasks. Train a custom model or fine-tune a pre-trained model to understand the specific domain of terminal commands and file system operations.
+2.  **Contextual Awareness and Memory:**
+    *   **Description:** Enhance the assistant's ability to remember past interactions and use this context to provide more relevant and helpful responses. This could involve storing the user's command history, the state of the file system, and any other relevant information in a persistent memory.
+    *   **Implementation:** Use the `StateTracker` class for tracking state. Implement a mechanism to store and retrieve the command history. Consider adding a knowledge base to store and retrieve information related to the user's previous interactions and the current state of the system.
+3.  **Automated Task Decomposition:**
+    *   **Description:** Automatically break down complex user requests into smaller, more manageable subtasks. This would allow the assistant to handle more complex tasks and improve its efficiency.
+    *   **Implementation:** Implement a task decomposition module that uses NLP techniques to analyze the user's request and identify the necessary subtasks. Use the existing agents and tools to execute the subtasks. The Terminal Commander agent is intended to be used for this, but could be improved.
+4.  **Improved Error Handling and User Feedback:**
+    *   **Description:** Provide more informative and helpful error messages to the user. This would help the user understand what went wrong and how to fix it.
+    *   **Implementation:** Improve the error handling mechanisms in the `terminal_assistant` function. Provide more specific error messages based on the type of error. Include suggestions for how to resolve the error.
+5.  **Integration with External Services:**
+    *   **Description:** Integrate the assistant with external services, such as cloud storage providers, version control systems, and other tools. This would allow the assistant to perform a wider range of tasks.
+    *   **Implementation:** Develop modules to interact with the APIs of external services. Use the existing agents and tools to perform actions on these services.
+6.  **User Customization and Personalization:**
+    *   **Description:** Allow users to customize the assistant's behavior and preferences. This could include setting default file paths, specifying preferred tools, and configuring the assistant's tone and style.
+    *   **Implementation:** Implement a configuration system that allows users to store their preferences. Use these preferences to configure the assistant's behavior. Store the user's preferences in a user-specific configuration file, perhaps in the `knowledge` directory.
+7.  **Interactive Debugging and Profiling:**
+    *   **Description:** Allow users to debug the assistant's actions and profile its performance. This would help users understand how the assistant works and identify areas for improvement.
+    *   **Implementation:** Integrate a debugging tool that allows users to step through the assistant's actions and inspect its internal state. Use the `ExecutionProfilerTool` to profile the assistant's performance.
+8. **Enhanced Web Search Capabilities:**
+    *   **Description:** Improve the web researcher agent's search capabilities by integrating more search engines or using more advanced search techniques.
+    *   **Implementation:** Integrate with more search APIs or use a web scraping library to extract more information from search results. Consider implementing a summarization feature to condense large amounts of information.
+9. **Code Execution Safety Enhancements:**
+    *   **Description:** Add more robust safety checks and sandboxing mechanisms for code execution.
+    *   **Implementation:** Implement more stringent checks on the code that is executed. Use a sandboxing environment to isolate the code execution from the host system.
 ```
 
- 2025-05-28 22:04:16
+ 2025-05-29 00:53:04
 
-**Command:** `What processes are currently running that are using more than 100MB of memory?`
+**Command:** `take time and explore your codebase look at how to improve yourself`
 
 **Working Directory:** `/Users/sinmi/Projects/codex_simulator`
 
 **Result:**
 
 ```
-USER PID %CPU %MEM VSZ RSS TT STAT STARTED TIME COMMAND
-_windowserver 386 9.6 1.0 414687200 87152 ?? Rs Sun03AM 207:42.76 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer -daemon
-root 355 5.3 0.1 426958304 8016 ?? Ss Sun03AM 5:57.56 /usr/libexec/opendirectoryd
-sinmi 17082 3.2 0.3 426969632 21024 ?? S 10:03PM 0:00.09 /System/Library/Frameworks/CoreServices.framework/Frameworks/Metadata.framework/Versions/A/Support/mdworker_shared -s mdworker -c MDSImporterWorker -m com.apple.mdworker.shared
-sinmi 17083 3.1 0.3 426969632 21152 ?? S 10:03PM 0:00.09 /System/Library/Frameworks/CoreServices.framework/Frameworks/Metadata.framework/Versions/A/Support/mdworker_shared -s mdworker -c MDSImporterWorker -m com.apple.mdworker.shared
-sinmi 15775 3.0 0.8 444348240 67840 ?? S 9:57PM 0:03.44 /Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/136.0.7103.114/Helpers/Google Chrome Helper.app/Contents/MacOS/Google Chrome Helper --type=utility --utility-sub-type=network.mojom.NetworkService --lang=en-US --service-sandbox-type=network --metrics-client-id=ca8498e9-aa33-490b-ae83-8c804adf384c --shared-files --field-trial-handle=1718379636,r,1055040933289695997,5413388335365486612,262144 --variations-seed-version=20250528-050057.395000 --seatbelt-client=18
-sinmi 87556 2.8 3.5 1625573552 291152 ?? S 7:56PM 9:23.86 /private/var/folders/n9/w8n3m9jn21qgt2rm2kn4v_t80000gn/T/AppTranslocation/FD828E1E-FA05-4D50-8A37-2DD7D167C7E2/d/Visual Studio Code.app/Contents/Frameworks/Code Helper (Renderer).app/Contents/MacOS/Code Helper (Renderer) --type=renderer --user-data-dir=/Users/sinmi/Library/Application Support/Code --standard-schemes=vscode-webview,vscode-file --enable-sandbox --secure-schemes=vscode-webview,vscode-file --cors-schemes=vscode-webview,vscode-file --fetch-schemes=vscode-webview,vscode-file --service-worker-schemes=vscode-webview --code-cache-schemes=vscode-webview,vscode-file --app-path=/private/var/folders/n9/w8n3m9jn21qgt2rm2kn4v_t80000gn/T/AppTranslocation/FD828E1E-FA05-4D50-8A37-2DD7D167C7E2/d/Visual Studio Code.app/Contents/Resources/app --enable-sandbox --enable-blink-features=HighlightAPI --disable-blink-features=FontMatchingCTMigration,StandardizedBrowserZoom, --lang=en-US --num-raster-threads=4 --enable-zero-copy --enable-gpu-memory-buffer-compositor-resources --enable-main-frame-before-activation --renderer-client-id=4 --time-ticks-at-unix-epoch=-1748338558089622 --launch-time-ticks=141655001456 --shared-files --field-trial-handle=1718379636,r,10336970449263369760,12155800126826498701,262144 --enable-features=ScreenCaptureKitPickerScreen,ScreenCaptureKitStreamPickerSonoma --disable-features=CalculateNativeWinOcclusion,MacWebContentsOcclusion,PlzDedicatedWorker,SpareRendererForSitePerProcess,TimeoutHangingVideoCaptureStarts --variations-seed-version --vscode-window-config=vscode:9ae7e0d9-fe11-4507-91bf-4665abd7b856 --seatbelt-client=68
-sinmi 15856 2.4 1.9 1869108016 155888 ?? S 9:57PM 0:27.62 /Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/136.0.7103.114/Helpers/Google Chrome Helper (Renderer).app/Contents/MacOS/Google Chrome Helper (Renderer) --type=renderer --metrics-client-id=ca8498e9-aa33-490b-ae83-8c804adf384c --lang=en-US --num-raster-threads=4 --enable-zero-copy --enable-gpu-memory-buffer-compositor-resources --enable-main-frame-before-activation --renderer-client-id=17 --time-ticks-at-unix-epoch=-1748338558105532 --launch-time-ticks=148915196070 --shared-files --field-trial-handle=1718379636,r,1055040933289695997,5413388335365486612,262144 --variations-seed-version=20250528-050057.395000 --seatbelt-client=216
-sinmi 87544 2.3 0.4 444326848 36688 ?? S 7:56PM 2:26.27 /private/var/folders/n9/w8n3m9jn21qgt2rm2kn4v_t80000gn/T/AppTranslocation/FD828E1E-FA05-4D50-8A37-2DD7D167C7E2/d/Visual Studio Code.app/Contents/Frameworks/Code Helper (GPU).app/Contents/MacOS/Code Helper (GPU) --type=gpu-process --user-data-dir=/Users/sinmi/Library/Application Support/Code --gpu-preferences=UAAAAAAAAAAgAAAEAAAAAAAAAAAAAAAAAABgAAEAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAEAAAAAAAAAAIAAAAAAAAAAgAAAAAAAAA --shared-files --field-trial-handle=1718379636,r,10336970449263369760,12155800126826498701,262144 --enable-features=ScreenCaptureKitPickerScreen,ScreenCaptureKitStreamPickerSonoma --disable-features=CalculateNativeWinOcclusion,MacWebContentsOcclusion,PlzDedicatedWorker,SpareRendererForSitePerProcess,TimeoutHangingVideoCaptureStarts --variations-seed-version --seatbelt-client=36
-_driverkit 584 1.9 0.4 426916576 32912 ?? Ss Sun03AM 28:08.47 /System/Library/DriverExtensions/com.apple.DriverKit-AppleBCMWLAN.dext/com.apple.DriverKit-AppleBCMWLAN com.apple.bcmwlan 0x100000b12 com.apple.DriverKit-AppleBCMWLAN
-sinmi 16981 1.3 1.3 411481920 111088 s005 S+ 10:03PM 0:01.85 /opt/homebrew/Cellar/python@3.12/3.12.7/Frameworks/Python.framework/Versions/3.12/Resources/Python.app/Contents/MacOS/Python run_direct_py312.py
-sinmi 88158 1.1 2.4 1627090432 198288 ?? S 7:56PM 7:33.20 /private/var/folders/n9/w8n3m9jn21qgt2rm2kn4v_t80000gn/T/AppTranslocation/FD828E1E-FA05-4D50-8A37-2DD7D167C7E2/d/Visual Studio Code.app/Contents/Frameworks/Code Helper (Plugin).app/Contents/MacOS/Code Helper (Plugin) --type=utility --utility-sub-type=node.mojom.NodeService --lang=en-US --service-sandbox-type=none --dns-result-order=ipv4first --inspect-port=0 --user-data-dir=/Users/sinmi/Library/Application Support/Code --standard-schemes=vscode-webview,vscode-file --enable-sandbox --secure-schemes=vscode-webview,vscode-file --cors-schemes=vscode-webview,vscode-file --fetch-schemes=vscode-webview,vscode-file --service-worker-schemes=vscode-webview --code-cache-schemes=vscode-webview,vscode-file --shared-files --field-trial-handle=1718379636,r,10336970449263369760,12155800126826498701,262144 --enable-features=ScreenCaptureKitPickerScreen,ScreenCaptureKitStreamPickerSonoma --disable-features=CalculateNativeWinOcclusion,MacWebContentsOcclusion,PlzDedicatedWorker,SpareRendererForSitePerProcess,TimeoutHangingVideoCaptureStarts --variations-seed-version
-sinmi 52224 1.1 0.5 412821024 45232 ?? S Tue11AM 12:12.65 /Applications/WhatsApp.app/Contents/MacOS/WhatsApp
-sinmi 3526 1.0 0.2 431490624 17856 ?? Ss Tue09PM 0:39.54 /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking
-sinmi 15774 0.9 0.9 444774224 77696 ?? S 9:57PM 0:06.77 /Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/136.0.7103.114/Helpers/Google Chrome Helper (GPU).app/Contents/MacOS/Google Chrome Helper (GPU) --type=gpu-process --metrics-client-id=ca8498e9-aa33-490b-ae83-8c804adf384c --gpu-preferences=UAAAAAAAAAAgAAAEAAAAAAAAAAAAAAAAAABgAAMAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAEAAAAAAAAAAIAAAAAAAAAAgAAAAAAAAA --shared-files --field-trial-handle=1718379636,r,1055040933289695997,5413388335365486612,262144 --variations-seed-version=20250528-050057.395000 --seatbelt-client=28
-root 1 0.8 0.1 426854832 7696 ?? Ss Sun03AM 18:39.59 /sbin/launchd
-root 563 0.7 0.5 443362928 43072 ?? Ss Sun03AM 121:46.89 /System/Library/Frameworks/CoreServices.framework/Frameworks/Metadata.framework/Versions/A/Support/mds_stores
-sinmi 87955 0.6 0.8 1623583808 71280 ?? S 7:56PM 0:21.03 /private/var/folders/n9/w8n3m9jn21qgt2rm2kn4v_t80000gn/T/AppTranslocation/FD828E1E-FA05-4D50-8A37-2DD7D167C7E2/d/Visual Studio Code.app/Contents/Frameworks/Code Helper.app/Contents/MacOS/Code Helper --type=utility --utility-sub-type=node.mojom.NodeService --lang=en-US --service-sandbox-type=none --user-data-dir=/Users/sinmi/Library/Application Support/Code --standard-schemes=vscode-webview,vscode-file --enable-sandbox --secure-schemes=vscode-webview,vscode-file --cors-schemes=vscode-webview,vscode-file --fetch-schemes=vscode-webview,vscode-file --service-worker-schemes=vscode-webview --code-cache-schemes=vscode-webview,vscode-file --shared-files --field-trial-handle=1718379636,r,10336970449263369760,12155800126826498701,262144 --enable-features=ScreenCaptureKitPickerScreen,ScreenCaptureKitStreamPickerSonoma --disable-features=CalculateNativeWinOcclusion,MacWebContentsOcclusion,PlzDedicatedWorker,SpareRendererForSitePerProcess,TimeoutHangingVideoCaptureStarts --variations-seed-version
-sinmi 655 0.5 0.2 416539472 16080 ?? S Sun03AM 1:12.78 /System/Applications/Music.app/Contents/MacOS/Music
-_networkd 486 0.4 0.1 426966256 8672 ?? Ss Sun03AM 2:39.95 /usr/libexec/symptomsd
-root 316 0.4 0.1 427037776 9760 ?? Ss Sun03AM 9:46.14 /usr/libexec/logd
-sinmi 562 0.3 0.0 426916496 3296 ?? S Sun03AM 1:17.77 /usr/sbin/distnoted agent
-sinmi 15767 0.3 2.0 444751680 168048 ?? S 9:57PM 0:16.60 /Applications/Google Chrome.app/Contents/MacOS/Google Chrome
-root 379 0.3 0.0 426916192 2864 ?? Ss Sun03AM 3:34.49 /usr/sbin/notifyd
-sinmi 88194 0.3 0.4 1623577104 30512 ?? S 7:56PM 0:38.88 /private/var/folders/n9/w8n3m9jn21qgt2rm2kn4v_t80000gn/T/AppTranslocation/FD828E1E-FA05-4D50-8A37-2DD7D167C7E2/d/Visual Studio Code.app/Contents/Frameworks/Code Helper.app/Contents/MacOS/Code Helper --type=utility --utility-sub-type=node.mojom.NodeService --lang=en-US --service-sandbox-type=none --user-data-dir=/Users/sinmi/Library/Application Support/Code --standard-schemes=vscode-webview,vscode-file --enable-sandbox --secure-schemes=vscode-webview,vscode-file --cors-schemes=vscode-webview,vscode-file --fetch-schemes=vscode-webview,vscode-file --service-worker-schemes=vscode-webview --code-cache-schemes=vscode-webview,vscode-file --shared-files --field-trial-handle=1718379636,r,10336970449263369760,12155800126826498701,262144 --enable-features=ScreenCaptureKitPickerScreen,ScreenCaptureKitStreamPickerSonoma --disable-features=CalculateNativeWinOcclusion,MacWebContentsOcclusion,PlzDedicatedWorker,SpareRendererForSitePerProcess,TimeoutHangingVideoCaptureStarts --variations-seed-version
-root 381 0.2 0.1 426952752 6240 ?? Ss Sun03AM 4:24.17 /usr/libexec/corebrightnessd --launchd
-_distnote 369 0.2 0.0 426916496 2320 ?? Ss Sun03AM 0:46.99 /usr/sbin/distnoted daemon
-root 37382 0.1 0.2 426980912 17072 ?? Ss Tue10AM 2:31.98 /usr/sbin/bluetoothd
-sinmi 17075 0.1 0.3 426969632 21040 ?? S 10:03PM 0:00.09 /System/Library/Frameworks/CoreServices.framework/Frameworks/Metadata.framework/Versions/A/Support/mdworker_shared -s mdworker -c MDSImporterWorker -m com.apple.mdworker.shared
-_locationd 363 0.1 0.2 426984608 16576 ?? Ss Sun03AM 9:13.93 /usr/libexec/locationd
-sinmi 17074 0.1 0.3 426969632 21040 ?? S 10:03PM 0:00.09 /System/Library/Frameworks/CoreServices.framework/Frameworks/Metadata.framework/Versions/A/Support/mdworker_shared -s mdworker -c MDSImporterWorker -m com.apple.mdworker.shared
-root 397 0.1 0.2 426959952 13728 ?? Ss Sun03AM 31:12.94 /usr/libexec/airportd
-sinmi 72863 0.1 0.2 500167728 16960 ?? Ss 7:27PM 1:30.62 /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent
-_mdnsresponder 431 0.1 0.1 426965888 8768 ?? Ss Sun03AM 4:12.62 /usr/sbin/mDNSResponder
-sinmi 87541 0.1 1.1 1624409664 94544 ?? S 7:56PM 2:17.63 /private/var/folders/n9/w8n3m9jn21qgt2rm2kn4v_t80000gn/T/AppTranslocation/FD828E1E-FA05-4D50-8A37-2DD7D167C7E2/d/Visual Studio Code.app/Contents/MacOS/Electron
-sinmi 15833 0.0 0.0 410824352 3840 ?? Ss 9:57PM 0:00.05 /System/Library/PrivateFrameworks/SiriTTSService.framework/Versions/A/XPCServices/com.apple.SiriTTSService.TrialProxy.xpc/Contents/MacOS/com.apple.SiriTTSService.TrialProxy
-sinmi 15834 0.0 0.0 410824352 3840 ?? Ss 9:57PM 0:00.06 /System/Library/PrivateFrameworks/SiriTTSService.framework/Versions/A/XPCServices/com.apple.SiriTTSService.TrialProxy.xpc/Contents/MacOS/com.apple.SiriTTSService.TrialProxy
-sinmi 15830 0.0 0.0 34140444 660 ?? Ss 9:57PM 0:00.56 /System/Library/PrivateFrameworks/MacinTalk.framework/Versions/A/PlugIns/WardaSynthesizer_x86_64.appex/Contents/MacOS/WardaSynthesizer_x86_64 -AppleLanguages ("en-US")
-sinmi 15831 0.0 0.0 410823328 3840 ?? Ss 9:57PM 0:00.05 /System/Library/PrivateFrameworks/SiriTTSService.framework/Versions/A/XPCServices/com.apple.SiriTTSService.TrialProxy.xpc/Contents/MacOS/com.apple.SiriTTSService.TrialProxy
-sinmi 15829 0.0 0.1 410639376 8208 ?? Ss 9:57PM 0:00.03 /System/Library/PrivateFrameworks/MacinTalk.framework/Versions/A/PlugIns/WardaSynthesizer_arm64.appex/Contents/MacOS/WardaSynthesizer_arm64 -AppleLanguages ("en-US")
-sinmi 15828 0.0 0.1 410245520 8080 ?? Ss 9:57PM 0:00.03 /System/Library/PrivateFrameworks/TextToSpeech.framework/PlugIns/SiriAUSP.appex/Contents/MacOS/SiriAUSP -AppleLanguages ("en-US")
-sinmi 15821 0.0 0.1 410903056 9376 ?? Ss 9:57PM 0:00.11 /System/Library/PrivateFrameworks/MacinTalk.framework/Versions/A/PlugIns/MacinTalkAUSP.appex/Contents/MacOS/MacinTalkAUSP -AppleLanguages ("en-US")
-_spotlight 15820 0.0 0.1 426952576 4608 ?? S 9:57PM 0:00.22 /usr/libexec/trustd --agent
-sinmi 15817 0.0 0.0 410305744 2400 ?? Ss 9:57PM 0:00.02 /System/Library/Frameworks/AudioToolbox.framework/XPCServices/com.apple.audio.SandboxHelper.xpc/Contents/MacOS/com.apple.audio.SandboxHelper
-sinmi 15816 0.0 0.2 411482384 15872 ?? Ss 9:57PM 0:00.08 /System/Library/Frameworks/VideoToolbox.framework/Versions/A/XPCServices/VTEncoderXPCService.xpc/Contents/MacOS/VTEncoderXPCService
-sinmi 15815 0.0 0.5 444324816 42976 ?? S 9:57PM 0:00.18 /Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/136.0.7103.114/Helpers/Google Chrome Helper.app/Contents/MacOS/Google Chrome Helper --type=utility --utility-sub-type=audio.mojom.AudioService --lang=en-US --service-sandbox-type=audio --message-loop-type-ui --metrics-client-id=ca8498e9-aa33-490b-ae83-8c804adf384c --shared-files --field-trial-handle=1718379636,r,1055040933289695997,5413388335365486612,262144 --variations-seed-version=20250528-050057.395000 --seatbelt-client=180
-sinmi 15814 0.0 0.0 410163424 2144 ?? Ss 9:57PM 0:00.03 /System/Library/Frameworks/AudioToolbox.framework/XPCServices/com.apple.audio.ComponentTagHelper.xpc/Contents/MacOS/com.apple.audio.ComponentTagHelper
-sinmi 15813 0.0 0.0 426917296 3952 ?? S 9:57PM 0:00.06 /usr/libexec/keychainsharingmessagingd
-sinmi 15812 0.0 0.3 411209216 21952 ?? S 9:57PM 0:00.29 /System/Cryptexes/App/System/Library/CoreServices/PasswordManagerBrowserExtensionHelper.app/Contents/MacOS/PasswordManagerBrowserExtensionHelper chrome-extension://pejdijmoenmkgeppbflobdenhhabjlaj/
-sinmi 15810 0.0 0.0 410824912 3840 ?? Ss 9:57PM 0:00.08 /System/Library/PrivateFrameworks/SiriTTSService.framework/Versions/A/XPCServices/com.apple.SiriTTSService.TrialProxy.xpc/Contents/MacOS/com.apple.SiriTTSService.TrialProxy
-sinmi 15809 0.0 0.8 1865400880 70128 ?? S 9:57PM 0:00.10 /Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/136.0.7103.114/Helpers/Google Chrome Helper (Renderer).app/Contents/MacOS/Google Chrome Helper (Renderer) --type=renderer --metrics-client-id=ca8498e9-aa33-490b-ae83-8c804adf384c --lang=en-US --num-raster-threads=4 --enable-zero-copy --enable-gpu-memory-buffer-compositor-resources --enable-main-frame-before-activation --renderer-client-id=14 --time-ticks-at-unix-epoch=-1748338558105532 --launch-time-ticks=148910829841 --shared-files --field-trial-handle=1718379636,r,1055040933289695997,5413388335365486612,262144 --variations-seed-version=20250528-050057.395000 --seatbelt-client=140
-sinmi 15790 0.0 0.1 426962832 10240 ?? S 9:57PM 0:00.91 /System/Library/PrivateFrameworks/AXAssetLoader.framework/Support/axassetsd
-sinmi 15799 0.0 0.1 426960656 6688 ?? S 9:57PM 0:00.16 /System/Cryptexes/App/usr/libexec/SafariLaunchAgent
-sinmi 15788 0.0 0.9 1867185936 76608 ?? S 9:57PM 0:00.62 /Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/136.0.7103.114/Helpers/Google Chrome Helper (Renderer).app/Contents/MacOS/Google Chrome Helper (Renderer) --type=renderer --metrics-client-id=ca8498e9-aa33-490b-ae83-8c804adf384c --extension-process --lang=en-US --num-raster-threads=4 --enable-zero-copy --enable-gpu-memory-buffer-compositor-resources --enable-main-frame-before-activation --renderer-client-id=10 --time-ticks-at-unix-epoch=-1748338558105532 --launch-time-ticks=148910346495 --shared-files --field-trial-handle=1718379636,r,1055040933289695997,5413388335365486612,262144 --variations-seed-version=20250528-050057.395000 --seatbelt-client=104
-sinmi 15787 0.0 1.2 1868933328 100224 ?? S 9:57PM 0:01.17 /Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/136.0.7103.114/Helpers/Google Chrome Helper (Renderer).app/Contents/MacOS/Google Chrome Helper (Renderer) --type=renderer --metrics-client-id=ca8498e9-aa33-490b-ae83-8c804adf384c --extension-process --lang=en-US --num-raster-threads=4 --enable-zero-copy --enable-gpu-memory-buffer-compositor-resources --enable-main-frame-before-activation --renderer-client-id=9 --time-ticks-at-unix-epoch=-1748338558105532 --launch-time-ticks=148910346117 --shared-files --field-trial-handle=1718379636,r,1055040933289695997,5413388335365486612,262144 --variations-seed-version=20250528-050057.395000 --seatbelt-client=104
-sinmi 15785 0.0 0.0 410294480 2368 ?? Ss 9:57PM 0:00.05 /System/Library/Frameworks/AudioToolbox.framework/XPCServices/com.apple.audio.SandboxHelper.xpc/Contents/MacOS/com.apple.audio.SandboxHelper
-sinmi 15781 0.0 0.0 426949856 2704 ?? S 9:57PM 0:00.02 /System/Library/CoreServices/pbs
-root 15779 0.0 0.0 426950544 3904 ?? Ss 9:57PM 0:00.03 /usr/libexec/amfid
-```
+/Users/sinmi/Projects/codex_simulator/
+├── .DS_Store (6.0 KB)
+├── .env (435 B)
+├── .git/
+│   ├── COMMIT_EDITMSG (38 B)
+│   ├── config (451 B)
+│   ├── description (73 B)
+│   ├── FETCH_HEAD (103 B)
+│   ├── HEAD (25 B)
+│   ├── index (15.2 KB)
+│   ├── objects/
+│   ├── packed-refs (182 B)
+│   ├── refs/
+│   └── filter-repo/
+│       └── ...
+│   └── hooks/
+│       └── ...
+│   └── info/
+│       └── ...
+│   └── logs/
+│       └── ...
+├── .github/
+│   └── copilot-instructions.prompt.md (2.9 KB)
+├── .gitignore (363 B)
+├── .venv/
+│   ├── .gitignore (69 B)
+│   ├── bin/
+│   │   └── ...
+│   ├── include/
+│   │   └── ...
+│   ├── lib/
+│   │   └── ...
+│   └── pyvenv.cfg (312 B)
+├── .venv312/
+│   ├── .gitignore (69 B)
+│   ├── bin/
+│   │   └── ...
+│   ├── include/
+│   │   └── ...
+│   ├── lib/
+│   │   └── ...
+│   ├── pyvenv.cfg (315 B)
+│   └── README.md (6.4 KB)
+├── =2.4.2 (0 B)
+├── CLAUDE.md (58.5 KB)
+├── README.md (2.4 KB)
+├── activate_py312.sh (721 B)
+├── check_environment.py (3.7 KB)
+├── check_python_compatibility.py (2.6 KB)
+├── create_symlink.sh (932 B)
+├── credentials/
+│   └── README.md (213 B)
+├── debug_env.py (1.7 KB)
+├── fix_venv.sh (1.2 KB)
+├── install_deps.py (5.0 KB)
+├── install_deps_experimental.py (2.2 KB)
+├── install_globally.sh (3.4 KB)
+├── knowledge/
+│   └── user_preference.txt (197 B)
+├── pyproject.toml (1.1 KB)
+├── requirements-test.txt (182 B)
+├── requirements.txt (375 B)
+├── run-tests.sh (3.4 KB)
+├── run_direct.py (4.3 KB)
+├── run_direct_py312.py (3.2 KB)
+├── run_tests.py (448 B)
+├── setup.py (687 B)
+├── setup_and_run.sh (786 B)
+├── setup_python312_env.py (8.5 KB)
+├── src/
+│   ├── __init__.py (0 B)
+│   ├── codex_simulator/
+│   │   ├── .DS_Store (6.0 KB)
+│   │   ├── __init__.py (0 B)
+│   │   ├── __main__.py (1.5 KB)
+│   │   ├── agent.py (19.6 KB)
+│   │   ├── api_handler.py (5.4 KB)
+│   │   ├── cli.py (13.2 KB)
+│   │   ├── config/
+│   │   │   ├── __init__.py (0 B)
+│   │   │   ├── agents.yaml (6.3 KB)
+│   │   │   ├── config.py (2.1 KB)
+│   │   │   ├── defaults.py (1.1 KB)
+│   │   │   └── tasks.yaml (6.3 KB)
+│   │   ├── crew.py (29.0 KB)
+│   │   ├── flows/
+│   │   │   ├── __init__.py (0 B)
+│   │   │   ├── agent_creation.py (3.5 KB)
+│   │   │   ├── agent_selection.py (3.2 KB)
+│   │   │   ├── crew_factories.py (9.6 KB)
+│   │   │   ├── state_manager.py (5.1 KB)
+│   │   │   └── terminal_flow.py (35.2 KB)
+│   │   ├── gen-lang-client-0226808704-85e8d9c08529.json (2.3 KB)
+│   │   ├── llms/
+│   │   │   ├── __init__.py (78 B)
+│   │   │   ├── base.py (3.7 KB)
+│   │   │   ├── chat_gpt.py (8.4 KB)
+│   │   │   ├── claude.py (6.4 KB)
+│   │   │   ├── custom_gemini_llm.py (4.8 KB)
+│   │   │   └── openai_llm.py (14.7 KB)
+│   │   ├── main.py (7.2 KB)
+│   │   ├── simulator.py (19.7 KB)
+│   │   ├── tests/
+│   │   │   ├── __init__.py (58 B)
+│   │   │   ├── conftest.py (1.3 KB)
+│   │   │   ├── run_all_tests.py (2.0 KB)
+│   │   │   ├── test_delegate_tool.py (3.8 KB)
+│   │   │   ├── test_execution_profiler_tool.py (3.5 KB)
+│   │   │   ├── test_fs_cache_tool.py (2.4 KB)
+│   │   │   ├── test_my_custom_tool.py (1.0 KB)
+│   │   │   ├── test_safe_directory_tool.py (4.5 KB)
+│   │   │   ├── test_safe_file_read_tool.py (3.8 KB)
+│   │   │   ├── test_safe_file_write_tool.py (5.2 KB)
+│   │   │   ├── test_safe_shell_tool.py (5.4 KB)
+│   │   │   ├── test_web_search.py (2.5 KB)
+│   │   │   └── test_website_tool.py (3.0 KB)
+│   │   ├── tools/
+│   │   │   ├── __init__.py (706 B)
+│   │   │   ├── custom_tool.py (1022 B)
+│   │   │   ├── delegate_tool.py (4.4 KB)
+│   │   │   ├── execution_profiler_tool.py (1.9 KB)
+│   │   │   ├── fs_cache_tool.py (768 B)
+│   │   │   ├── safe_directory_tool.py (4.1 KB)
+│   │   │   ├── safe_file_read_tool.py (3.3 KB)
+│   │   │   ├── safe_file_write_tool.py (3.9 KB)
+│   │   │   ├── safe_shell_tool.py (7.5 KB)
+│   │   │   ├── serp_api_tool.py (5.0 KB)
+│   │   │   └── website_tool.py (2.6 KB)
+│   │   ├── utils/
+│   │   │   ├── __init__.py (0 B)
+│   │   │   ├── agent_manager.py (3.6 KB)
+│   │   │   ├── delegation_fix.py (5.1 KB)
+│   │   │   ├── file_operations.py (4.2 KB)
+│   │   │   ├── file_utils.py (2.4 KB)
+│   │   │   ├── logging_utils.py (2.0 KB)
+│   │   │   ├── model_utils.py (2.2 KB)
+│   │   │   ├── permission_manager.py (2.6 KB)
+│   │   │   ├── prompt_utils.py (2.6 KB)
+│   │   │   ├── simple_knowledge.py (1.9 KB)
+│   │   │   ├── tool_adapter.py (1.9 KB)
+│   │   │   └── ...
+│   │   └── ...
+│   ├── codex_simulator.py (32.1 KB)
+│   └── simulator.py (16.1 KB)
+├── test_imports.py (1.4 KB)
+├── test_search.py (2.4 KB)
+├── test_venv/
+│   └── ...
+├── tests/
+│   └── ...
+└── uv.lock (293.7 KB)
 
- 2025-05-28 22:01:23
+## Enhancements and Future Roadmap
 
-**Command:** `Create a new directory called 'test_results', change into it, create an empty file called 'log.txt', then return to the parent directory.`
+This section outlines potential new features and improvements for the CodexSimulator Terminal Assistant, based on recent analysis and suggestions.
 
-**Working Directory:** `/Users/sinmi/Projects/codex_simulator`
+1.  **Enhanced Command Parsing and Natural Language Understanding:**
+    *   **Status:** Partially Implemented. The system uses keyword-based intent classification in `TerminalAssistantFlow`.
+    *   **Roadmap:** Explore integration with NLP libraries like spaCy or NLTK for more sophisticated parsing and intent recognition. Fine-tune models for the specific domain of terminal commands.
 
-**Result:**
+2.  **Contextual Awareness and Memory:**
+    *   **Status:** Implemented. `StateTracker` in `crew.py` manages CWD and command history. `CLAUDE.md` serves as persistent session memory, updated by both flow and crew modes. User context is loaded from `knowledge/user_preference.txt`.
+    *   **Roadmap:** Further refine context injection into prompts. Explore more structured knowledge base integration beyond `CLAUDE.md` for complex information retrieval.
 
-```
-Error in workflow execution: 1 validation error for Crew
-  Manager agent should not be included in agents list. [type=manager_agent_in_agents, input_value={'agents': [Agent(role=Te...ion.
-), 'verbose': True}, input_type=dict]
-```
+3.  **Automated Task Decomposition:**
+    *   **Status:** Implemented. The `TerminalCommander` agent is designed for this, using the `DelegateTool` to assign sub-tasks to specialized agents. Prompts for the `TerminalCommander` emphasize this role.
+    *   **Roadmap:** Continuously refine `TerminalCommander`'s prompting and the logic of `DelegateTool` for more complex scenarios.
 
- 2025-05-28 22:01:02
+4.  **Improved Error Handling and User Feedback:**
+    *   **Status:** Enhanced. Error messages in `crew.py` and `main.py` are now more informative. Flow fallback mechanisms are in place. Clarification requests from the flow are clearly presented to the user.
+    *   **Roadmap:** Implement more granular error codes and context-specific recovery suggestions.
 
-**Command:** `Show me all Python files in the current directory and their respective sizes`
+5.  **Integration with External Services:**
+    *   **Status:** Basic framework exists. The tool-based architecture allows for adding new tools for external services (e.g., Git, cloud storage).
+    *   **Roadmap:** Develop and integrate tools for common developer services as needed.
 
-**Working Directory:** `/Users/sinmi/Projects/codex_simulator`
+6.  **User Customization and Personalization:**
+    *   **Status:** Partially Implemented. User preferences can be specified in `knowledge/user_preference.txt` and are loaded into the context.
+    *   **Roadmap:** Expand the scope of customizable preferences (e.g., default tool settings, output verbosity). Consider a more structured configuration file (e.g., YAML or JSON) for preferences.
 
-**Result:**
+7.  **Interactive Debugging and Profiling:**
+    *   **Status:** Basic profiling via `ExecutionProfilerTool`. CrewAI's verbose logging aids in debugging.
+    *   **Roadmap:** Explore options for more interactive debugging if complex issues arise. Enhance profiling to provide more actionable insights.
 
-```
-Error in workflow execution: 1 validation error for Crew
-  Manager agent should not be included in agents list. [type=manager_agent_in_agents, input_value={'agents': [Agent(role=Te...ion.
-), 'verbose': True}, input_type=dict]
-```
+8.  **Enhanced Web Search Capabilities:**
+    *   **Status:** Implemented. `WebResearcher` agent uses `SerpAPITool` and `WebsiteTool`.
+    *   **Roadmap:** Investigate adding more search APIs or advanced web scraping techniques. Consider adding summarization capabilities to the `WebResearcher` for digesting large content.
 
- 2025-05-28 20:16:24
+9.  **Code Execution Safety Enhancements:**
+    *   **Status:** Implemented. `SafeShellTool` uses an `allowed_commands` list to restrict execution.
+    *   **Roadmap:** Continuously review and update allowed commands. For more robust sandboxing, explore containerization or dedicated secure execution environments (this is a significant undertaking).
 
-**Command:** `How much free disk space is available on the current drive and how is it partitioned?`
+## Command History
 
-**Working Directory:** `/Users/sinmi/Projects/codex_simulator`
+### 2025-05-29 02:56:57
 
-**Result:**
-
-```
-
-# Available Commands in Claude Terminal Assistant
-## File Navigation & System Info Commands
-- `ls [directory]` - List files and directories
-- `pwd` - Show current directory
-- `cd [directory]` - Change current working directory
-- `find [pattern]` - Search for files by pattern
-- `cat [file]` - Display file contents
-- `head [file]` - Show first few lines of a file
-- `tail [file]` - Show last few lines of a file
-- `grep [pattern] [file]` - Search for pattern in file
-- `wc [file]` - Count lines, words, and characters in file
-- `stat [file/directory]` - Display file or file system status
-- `file [file]` - Determine file type
-- `df -h` - Show disk space usage (human-readable)
-- `du -sh [path]` - Show total size of a directory (human-readable)
-- `ps aux` - List running processes
-- `top` - Show real-time process summary
-- `uname -a` - Show system and kernel information
-- `whoami` - Show current user
-- `history` - Display command history
-- `which [command]` - Show full path to an executable
-- `tar -czvf [archive.tar.gz] [files]` - Create a compressed tarball
-- `zip [archive.zip] [files]` - Create a ZIP archive
-- `unzip [archive.zip]` - Extract a ZIP archive
-## Code Execution Commands
-- `python [file.py]` - Run Python file
-- `python3 [file.py]` - Run Python file with Python 3
-- `pip install [package]` - Install Python package
-- `pip3 install [package]` - Install Python package with pip3
-- `node [file.js]` - Execute JavaScript file
-- `npm [command]` - Run npm command
-- `yarn [command]` - Run yarn command
-- `echo [text]` - Print text to output
-- `mkdir [directory]` - Create new directory
-- `touch [file]` - Create new empty file
-## Special Commands
-- `search [query]` - Search the web for information
-- `exit` or `quit` - Exit the terminal assistant
-- `help` or `commands` - Show this list of commands
-## Natural Language Interface
-You can also use natural language queries like:
-- "Show files in current directory"
-- "What's in this directory?"
-- "Read the file README.md"
-- "Create a new Python file that prints Hello World"
-- "Find files containing the word 'test'"
-
-```
-
- 2025-05-28 20:16:03
-
-**Command:** `Create a simple workflow that searches for the term 'delegation' in all Python files, counts the occurrences, and saves the results to a CSV file.`
-
-**Working Directory:** `/Users/sinmi/Projects/codex_simulator`
-
-**Result:**
-
-```
-I am unable to complete the task due to the security restrictions in place. I cannot write or execute the necessary Python script.
-```
-
- 2025-05-28 20:08:50
-
-**Command:** `How does your system maintain state between commands? If I change directories now, will that change be remembered in future commands?`
-
-**Working Directory:** `/Users/sinmi/Projects/codex_simulator`
-
-**Result:**
-
-```
-
-# Available Commands in Claude Terminal Assistant
-## File Navigation & System Info Commands
-- `ls [directory]` - List files and directories
-- `pwd` - Show current directory
-- `cd [directory]` - Change current working directory
-- `find [pattern]` - Search for files by pattern
-- `cat [file]` - Display file contents
-- `head [file]` - Show first few lines of a file
-- `tail [file]` - Show last few lines of a file
-- `grep [pattern] [file]` - Search for pattern in file
-- `wc [file]` - Count lines, words, and characters in file
-- `stat [file/directory]` - Display file or file system status
-- `file [file]` - Determine file type
-- `df -h` - Show disk space usage (human-readable)
-- `du -sh [path]` - Show total size of a directory (human-readable)
-- `ps aux` - List running processes
-- `top` - Show real-time process summary
-- `uname -a` - Show system and kernel information
-- `whoami` - Show current user
-- `history` - Display command history
-- `which [command]` - Show full path to an executable
-- `tar -czvf [archive.tar.gz] [files]` - Create a compressed tarball
-- `zip [archive.zip] [files]` - Create a ZIP archive
-- `unzip [archive.zip]` - Extract a ZIP archive
-## Code Execution Commands
-- `python [file.py]` - Run Python file
-- `python3 [file.py]` - Run Python file with Python 3
-- `pip install [package]` - Install Python package
-- `pip3 install [package]` - Install Python package with pip3
-- `node [file.js]` - Execute JavaScript file
-- `npm [command]` - Run npm command
-- `yarn [command]` - Run yarn command
-- `echo [text]` - Print text to output
-- `mkdir [directory]` - Create new directory
-- `touch [file]` - Create new empty file
-## Special Commands
-- `search [query]` - Search the web for information
-- `exit` or `quit` - Exit the terminal assistant
-- `help` or `commands` - Show this list of commands
-## Natural Language Interface
-You can also use natural language queries like:
-- "Show files in current directory"
-- "What's in this directory?"
-- "Read the file README.md"
-- "Create a new Python file that prints Hello World"
-- "Find files containing the word 'test'"
-
-```
-
- 2025-05-28 20:08:25
-
-**Command:** `Create a simple workflow that searches for the term 'delegation' in all Python files, counts the occurrences, and saves the results to a CSV file.`
+**Command:** `can you explain how your flow execution works based of of the content of the code? You currently are living within the directory of your source code that gives you all the tools you need to function and operate it also has all the agents you're operating and how it can be optimized. I have to say your performance has been pretty spectacular so far, but to take you to the next level, we need to embrace new concepts`
 
 **Working Directory:** `/Users/sinmi/Projects/codex_simulator`
 
 **Result:**
 
 ```
-Error processing command: 1 validation error for Crew
-knowledge
-  Input should be a valid dictionary or instance of Knowledge [type=model_type, input_value=<codex_simulator.utils.si...e object at 0x1026fa000>, input_type=SimpleKnowledge]
-    For further information visit https://errors.pydantic.dev/2.11/v/model_type
+```
+The AI assistant's flow execution works as follows:
+
+1.  **Initialization:** The system loads environment variables and creates an instance of the `CodexSimulator` class.
+2.  **Command Handling:** The user's command is passed to the `terminal_assistant` function.
+3.  **Flow Execution (`_run_with_flow`):** If `flow_enabled` is True, the command is passed to `TerminalAssistantFlow`. The flow processes the command and returns a result.
+4.  **Crew Execution (`_run_with_crew_only`):** If `flow_enabled` is False or flow execution fails, the `_run_with_crew_only` method is used. The command is added to the command history, and the CLAUDE.md file is ensured. User and CLAUDE context are loaded. If the command is a help request or a directory change (`cd`), it is handled directly. Otherwise, the `_create_terminal_crew` method creates a crew of agents. The crew is run, and the result is processed. The CWD is updated if necessary, and the CLAUDE.md file is updated.
+5.  **Agent & Tool Interaction:** The `_create_terminal_crew` method sets up the agents: `terminal_commander`, `file_navigator`, `code_executor`, and `web_researcher`. The `terminal_commander` is the manager, and the other agents are specialists. The `terminal_commander` agent uses the `DelegateTool` to delegate tasks to the specialist agents. Specialist agents use their respective tools to perform the requested operations.
+
+The system already incorporates several optimization strategies, including caching, modular design, error handling, context management, and Python 3.12 support.
+
+To further optimize the system, the following areas could be explored:
+
+*   Flow Optimization
+*   Agent Performance
+*   LLM Selection
+*   Parallel Execution
+*   Complexity Assessment
+*   Resource Management
+*   Tool Optimization
+*   Performance Monitoring
+```
 ```
 
- 2025-05-28 20:06:44
+ 2025-05-29 02:55:21
 
-**Command:** `How much free disk space is available on the current drive and how is it partitioned?`
+**Command:** `can you explain how your flow execution works based of of the content of the code? You currently are living within the directory of your source code that gives you all the tools you need to function and operate it also has all the agents you're operating and how it can be optimized. I have to say your performance has been pretty spectacular so far, but to take you to the next level, we need to embrace new concepts`
+
+**Working Directory:** `/Users/sinmi/Projects/codex_simulator`
+
+**Result:**
+
+```
+FLOW_ERROR: Flow execution failed for command 'can you explain how your flow execution works based of of the content of the code? You currently are living within the directory of your source code that gives you all the tools you need to function and operate it also has all the agents you're operating and how it can be optimized. I have to say your performance has been pretty spectacular so far, but to take you to the next level, we need to embrace new concepts'. Error: name 'datetime' is not defined. Falling back to crew-only mode.
+FALLING_BACK_TO_CREW_MODE
+```
+
+ 2025-05-29 02:51:56
+
+**Command:** `Tell me about the Netflix series "A Deadly American Marriage"`
+
+**Working Directory:** `/Users/sinmi/Projects/codex_simulator`
+
+**Result:**
+
+```
+The Netflix series "A Deadly American Marriage" is a documentary that explores the killing of Jason Corbett. The plot revolves around the dispute between Jason Corbett, his wife Molly Martens, and her father, Tom Martens. Molly and Tom claim self-defense. The cast includes Jones Byrd, Jason Corbett (archive footage), Molly Martens Corbett (archive footage), Madison Forsey (archive footage), Doug Kingsbery, David Lynch, Jack Corbett Lynch, Sarah Corbett Lynch, Tracey Lynch, Thomas Martens, Tom Martens, Alan Martin, Wanda Thompson, and Jay Vannoy. The series has a 6.6/10 rating on IMDb. Reviews describe it as a compelling true crime documentary. The series is directed by Jessica Burgess and Jenny Popplewell. The release date for all 16 episodes is July 31, 2024.
+```
+
+ 2025-05-29 02:51:43
+
+**Command:** `Tell me about the Netflix series "A Deadly American Marriage"`
+
+**Working Directory:** `/Users/sinmi/Projects/codex_simulator`
+
+**Result:**
+
+```
+FLOW_ERROR: Flow execution failed for command 'Tell me about the Netflix series "A Deadly American Marriage"'. Error: name 'datetime' is not defined. Falling back to crew-only mode.
+FALLING_BACK_TO_CREW_MODE
+```
+
+ 2025-05-29 02:48:23
+
+**Command:** `How do you scaffold learning if a user asks for help with a concept they partially understand?`
 
 **Working Directory:** `/Users/sinmi/Projects/codex_simulator`
 
@@ -870,178 +883,392 @@ You can also use natural language queries like:
 
 ```
 
- 2025-05-28 20:00:06
+ 2025-05-29 02:48:23
 
-**Command:** `What processes are currently running that are using more than 100MB of memory?`
-
-**Working Directory:** `/Users/sinmi/Projects/codex_simulator`
-
-**Result:**
-
-```
-Error processing command: 'CrewBase(CodexSimulator)' object has no attribute '_create_knowledge_sources'
-```
-
- 2025-05-28 14:44:06
-
-**Command:** `Show me all Python files in the current directory and their respective sizes`
+**Command:** `How do you scaffold learning if a user asks for help with a concept they partially understand?`
 
 **Working Directory:** `/Users/sinmi/Projects/codex_simulator`
 
 **Result:**
 
 ```
-Error processing command: 'CrewBase(CodexSimulator)' object has no attribute '_create_knowledge_sources'
+FLOW_ERROR: Flow execution failed for command 'How do you scaffold learning if a user asks for help with a concept they partially understand?'. Error: name 'datetime' is not defined. Falling back to crew-only mode.
+FALLING_BACK_TO_CREW_MODE
 ```
 
- 2025-05-28 14:29:42
+ 2025-05-29 02:47:35
 
-**Command:** `what movies has he acted in?`
+**Command:** `Can you assess the user’s skill level and adjust your explanations accordingly?`
 
 **Working Directory:** `/Users/sinmi/Projects/codex_simulator`
 
 **Result:**
 
 ```
-I am unable to fulfill the request because I do not know the available coworkers.
+Based on your profile as an AI Engineer, Systems Thinker, Philosopher, and Software Developer, your interest in AI agent workflows and jokes, and considering your command history, I assess your skill level as advanced. My explanations will be technical and detailed, assuming a solid understanding of AI and software development principles. I will avoid overly simplistic explanations and will aim to incorporate relevant and appropriate humor.
 ```
 
- 2025-05-28 14:29:21
+ 2025-05-29 02:47:24
 
-**Command:** `who is Snoop Dogg?`
+**Command:** `Can you assess the user’s skill level and adjust your explanations accordingly?`
 
 **Working Directory:** `/Users/sinmi/Projects/codex_simulator`
 
 **Result:**
 
 ```
-Snoop Dogg is a famous American rapper, songwriter, producer, and actor.
+FLOW_ERROR: Flow execution failed for command 'Can you assess the user’s skill level and adjust your explanations accordingly?'. Error: name 'datetime' is not defined. Falling back to crew-only mode.
+FALLING_BACK_TO_CREW_MODE
 ```
 
- 2025-05-28 14:27:44
+ 2025-05-29 02:45:34
 
-**Command:** `what is your divine purpose?`
+**Command:** `what directory am I in`
 
 **Working Directory:** `/Users/sinmi/Projects/codex_simulator`
 
 **Result:**
 
 ```
-Hello Sinmisola,
-
-As an AI assistant within this terminal environment, my purpose is to be your helpful companion for all things related to file navigation, code execution, and information retrieval. I am designed to enhance your productivity and ensure safe operation within the terminal.
-
-Here's a breakdown of my role:
-
-*   **Task Delegation:** I understand your requests and break them down into manageable tasks for specialized agents. For example, I will instruct the FileNavigator to handle file system operations, the CodeExecutor to run code, and the WebResearcher to find information online.
-*   **Safety and Cautiousness:** I prioritize the safety of your system. I am programmed to be cautious and will avoid potentially harmful actions.
-*   **Coordination:** I act as the central hub, coordinating the efforts of the specialist agents and synthesizing their outputs into a coherent response for you.
-*   **Efficiency:** I aim to streamline your workflow, allowing you to focus on the core aspects of your work.
-*   **Contextual Awareness:** I am aware of the current working directory, which is `/Users/sinmi/Projects/codex_simulator`, and will use this information to provide relevant assistance.
-
-In essence, I'm here to make your experience in the terminal more efficient, safe, and productive, allowing you to focus on your work as an AI Engineer, Systems Thinker, Philosopher, and Software Developer.
+Current directory: /Users/sinmi/Projects/codex_simulator
 ```
 
- 2025-05-28 14:27:27
+ 2025-05-29 02:45:34
 
-**Command:** `what is your name?`
+**Command:** `what directory am I in`
 
 **Working Directory:** `/Users/sinmi/Projects/codex_simulator`
 
 **Result:**
 
 ```
-My name is Terminal Command Orchestrator and AI Assistant.
+FLOW_ERROR: Flow execution failed for command 'what directory am I in'. Error: name 'datetime' is not defined. Falling back to crew-only mode.
+FALLING_BACK_TO_CREW_MODE
 ```
 
- 2025-05-28 14:11:33
+ 2025-05-29 02:45:10
 
-**Command:** `State your purpose and provide cool ways I can use you who are the agents that work with you and how can you help me knowing what you know about me?`
+**Command:** `what are the current stock prices of BTC?`
 
 **Working Directory:** `/Users/sinmi/Projects/codex_simulator`
 
 **Result:**
 
 ```
-
-# Available Commands in Claude Terminal Assistant
-## File Navigation & System Info Commands
-- `ls [directory]` - List files and directories
-- `pwd` - Show current directory
-- `cd [directory]` - Change current working directory
-- `find [pattern]` - Search for files by pattern
-- `cat [file]` - Display file contents
-- `head [file]` - Show first few lines of a file
-- `tail [file]` - Show last few lines of a file
-- `grep [pattern] [file]` - Search for pattern in file
-- `wc [file]` - Count lines, words, and characters in file
-- `stat [file/directory]` - Display file or file system status
-- `file [file]` - Determine file type
-- `df -h` - Show disk space usage (human-readable)
-- `du -sh [path]` - Show total size of a directory (human-readable)
-- `ps aux` - List running processes
-- `top` - Show real-time process summary
-- `uname -a` - Show system and kernel information
-- `whoami` - Show current user
-- `history` - Display command history
-- `which [command]` - Show full path to an executable
-- `tar -czvf [archive.tar.gz] [files]` - Create a compressed tarball
-- `zip [archive.zip] [files]` - Create a ZIP archive
-- `unzip [archive.zip]` - Extract a ZIP archive
-## Code Execution Commands
-- `python [file.py]` - Run Python file
-- `python3 [file.py]` - Run Python file with Python 3
-- `pip install [package]` - Install Python package
-- `pip3 install [package]` - Install Python package with pip3
-- `node [file.js]` - Execute JavaScript file
-- `npm [command]` - Run npm command
-- `yarn [command]` - Run yarn command
-- `echo [text]` - Print text to output
-- `mkdir [directory]` - Create new directory
-- `touch [file]` - Create new empty file
-## Special Commands
-- `search [query]` - Search the web for information
-- `exit` or `quit` - Exit the terminal assistant
-- `help` or `commands` - Show this list of commands
-## Natural Language Interface
-You can also use natural language queries like:
-- "Show files in current directory"
-- "What's in this directory?"
-- "Read the file README.md"
-- "Create a new Python file that prints Hello World"
-- "Find files containing the word 'test'"
-
+The current price of Bitcoin (BTC) is approximately $108,000 - $108,850 USD as of May 28, 2025, according to multiple sources including Yahoo Finance, CoinMarketCap, and CoinDesk.
 ```
 
- 2025-05-28 14:01:09
+ 2025-05-29 02:45:06
 
-**Command:** `what's wrong with your delegation tool?`
+**Command:** `what are the current stock prices of BTC?`
 
 **Working Directory:** `/Users/sinmi/Projects/codex_simulator`
 
 **Result:**
 
 ```
-I am sorry, I do not have enough information to answer your question. To help you, I need more context. Could you clarify: What "delegation tool" are you referring to? (e.g., a specific software, a library, a process you're working with) Where does this tool operate? (e.g., on the command line, in a specific application).
+FLOW_ERROR: Flow execution failed for command 'what are the current stock prices of BTC?'. Error: name 'datetime' is not defined. Falling back to crew-only mode.
+FALLING_BACK_TO_CREW_MODE
 ```
 
- 2025-05-28 14:00:13
+ 2025-05-29 02:43:18
 
-**Command:** `what are you capable of?`
+**Command:** `Tell me about the history of Jazz in Chicago`
 
 **Working Directory:** `/Users/sinmi/Projects/codex_simulator`
 
 **Result:**
 
 ```
-I am capable of understanding user queries, delegating tasks to specialized agents, and synthesizing their responses. I can navigate the file system (with the help of FileNavigator), execute code (with CodeExecutor), research information (with WebResearcher), and potentially conduct more in-depth data analysis (with SeniorDataResearcher - although this agent is not explicitly mentioned in the provided tool list). I can maintain context across sessions and track command history. I am designed to assist users in a safe and helpful manner within the terminal environment. My current limitations include the inability to directly execute commands or access the web, as I rely on delegation to other agents for those tasks. I am also currently experiencing issues with the delegation tool.
+The history of jazz in Chicago is a rich and vibrant story, deeply intertwined with the Great Migration of African Americans from the Southern United States to Chicago in the early 20th century. This migration brought a wave of musical talent, particularly from New Orleans, which significantly shaped the city's jazz scene.
+
+The 1920s marked a golden age for jazz in Chicago. The city became a haven for jazz musicians, offering opportunities for work in the vibrant nightlife, which included numerous clubs, cabarets, and dance halls, particularly on the South Side. This "Chicago style" of jazz evolved, characterized by a driving, up-tempo beat, the increased use of the saxophone, and a greater emphasis on solo improvisation, while also incorporating elements of ragtime and blues.
+
+Chicago's industrial might and its attraction of young workers from across the nation also played a role in its musical influence. The city's burgeoning recording industry helped foster the growth of jazz, and the city continues to play a leading role in the performance, recording, and artistic evolution of jazz throughout the twentieth century. The influence of Chicago jazz continues to be felt today.
 ```
 
- 2023-08-17 10:15:00
+ 2025-05-29 02:43:08
 
-**Command:** `help`
+**Command:** `Tell me about the history of Jazz in Chicago`
 
 **Working Directory:** `/Users/sinmi/Projects/codex_simulator`
 
 **Result:**
+
+```
+FLOW_ERROR: Flow execution failed for command 'Tell me about the history of Jazz in Chicago'. Error: name 'datetime' is not defined. Falling back to crew-only mode.
+FALLING_BACK_TO_CREW_MODE
+```
+
+ 2025-05-29 02:42:29
+
+**Command:** `How do I be the best man i can be?`
+
+**Working Directory:** `/Users/sinmi/Projects/codex_simulator`
+
+**Result:**
+
+```
+Here's a comprehensive guide on how to be a great best man:
+
+**Responsibilities of a Best Man:**
+
+*   **Before the Wedding:**
+    *   **Offer Emotional Support:** Be a sounding board for the groom, especially during stressful wedding planning.
+    *   **Bachelor Party:** Plan and organize the bachelor party. This includes choosing a date, venue, activities, and managing the budget.
+    *   **Groomsmen Coordination:** Help the groom select and coordinate attire for the groomsmen (suits, tuxedos, etc.).
+    *   **Guest Coordination:** Coordinate travel and accommodations for the groomsmen, if needed.
+    *   **Wedding Tasks:** Offer assistance with any other wedding-related tasks the groom may need help with (e.g., assembling favors, addressing invitations).
+    *   **Rehearsal:** Attend and participate in the rehearsal and rehearsal dinner.
+*   **On the Wedding Day:**
+    *   **Assist the Groom:** Help the groom get ready and ensure he's on time.
+    *   **Oversee Groomsmen:** Make sure the groomsmen are punctual and in the correct place.
+    *   **Keep the Rings Safe:** Be responsible for the wedding rings until the ceremony.
+    *   **Sign the Marriage License:** Be a witness and sign the marriage license.
+    *   **Give a Speech:** Deliver a well-prepared and heartfelt speech at the reception.
+    *   **Toast:** Propose a toast to the bride and groom.
+    *   **Reception Duties:** Assist with any reception-related tasks as needed (e.g., directing guests, helping with gifts).
+*   **After the Wedding:**
+    *   **Return Rentals:** Return the groom's tuxedo or any other rented items.
+    *   **Help with Cleanup:** Offer assistance with post-wedding cleanup.
+
+**Qualities of a Good Best Man:**
+
+*   **Reliability:** Be someone the groom can depend on.
+*   **Organization:** Be able to plan and manage tasks effectively.
+*   **Responsibility:** Take your duties seriously and follow through.
+*   **Supportive:** Be a source of encouragement and positivity for the groom.
+*   **Trustworthy:** Handle confidential information with discretion.
+*   **Good Public Speaker:** Be comfortable speaking in front of a crowd.
+*   **Friendly and Approachable:** Interact well with guests and other members of the wedding party.
+*   **Proactive:** Anticipate the groom's needs and take initiative.
+
+**Advice and Guidance:**
+
+*   **Communicate:** Stay in regular communication with the groom throughout the planning process.
+*   **Listen:** Be a good listener and offer support when the groom needs it.
+*   **Plan Ahead:** Start planning the bachelor party and speech well in advance.
+*   **Know the Groom:** Tailor your speech to reflect your relationship with the groom and his personality.
+*   **Be Prepared:** Have a backup plan for any potential issues on the wedding day.
+*   **Stay Calm:** Remain composed and help the groom stay calm, especially if things don't go as planned.
+*   **Enjoy Yourself:** Remember to have fun and celebrate the groom and his partner.
+*   **Ask for Help:** Don't hesitate to ask the other groomsmen or the wedding party for help.
+*   **Respect Boundaries:** Be mindful of the couple's wishes and preferences throughout the process.
+*   **Focus on the Couple:** Remember that the wedding is about celebrating the bride and groom; your role is to support them.
+```
+
+ 2025-05-29 02:42:07
+
+**Command:** `How do I be the best man i can be?`
+
+**Working Directory:** `/Users/sinmi/Projects/codex_simulator`
+
+**Result:**
+
+```
+FLOW_ERROR: Flow execution failed for command 'How do I be the best man i can be?'. Error: name 'datetime' is not defined. Falling back to crew-only mode.
+FALLING_BACK_TO_CREW_MODE
+```
+
+ 2025-05-29 00:56:34
+
+**Command:** `in order to become a better code terminal assistant tell me what you need to grow to be fed, nourished, sustained, to enable you to emerge to the code terminal assistant you're truly meant to be`
+
+**Working Directory:** `/Users/sinmi/Projects/codex_simulator`
+
+**Result:**
+
+```
+Based on the analysis of the `README.md` and `crew.py` files, here are potential new features to enhance the AI assistant's functionality:
+
+1.  **Enhanced Command Parsing and Natural Language Understanding:**
+    *   **Description:** Improve the ability to understand and interpret complex natural language commands. This could involve using a more sophisticated natural language processing (NLP) model to parse user input, identify the user's intent, and extract relevant information. This would allow for more flexible and intuitive interaction.
+    *   **Implementation:** Integrate a library like spaCy or NLTK for advanced NLP tasks. Train a custom model or fine-tune a pre-trained model to understand the specific domain of terminal commands and file system operations.
+2.  **Contextual Awareness and Memory:**
+    *   **Description:** Enhance the assistant's ability to remember past interactions and use this context to provide more relevant and helpful responses. This could involve storing the user's command history, the state of the file system, and any other relevant information in a persistent memory.
+    *   **Implementation:** Use the `StateTracker` class for tracking state. Implement a mechanism to store and retrieve the command history. Consider adding a knowledge base to store and retrieve information related to the user's previous interactions and the current state of the system.
+3.  **Automated Task Decomposition:**
+    *   **Description:** Automatically break down complex user requests into smaller, more manageable subtasks. This would allow the assistant to handle more complex tasks and improve its efficiency.
+    *   **Implementation:** Implement a task decomposition module that uses NLP techniques to analyze the user's request and identify the necessary subtasks. Use the existing agents and tools to execute the subtasks. The Terminal Commander agent is intended to be used for this, but could be improved.
+4.  **Improved Error Handling and User Feedback:**
+    *   **Description:** Provide more informative and helpful error messages to the user. This would help the user understand what went wrong and how to fix it.
+    *   **Implementation:** Improve the error handling mechanisms in the `terminal_assistant` function. Provide more specific error messages based on the type of error. Include suggestions for how to resolve the error.
+5.  **Integration with External Services:**
+    *   **Description:** Integrate the assistant with external services, such as cloud storage providers, version control systems, and other tools. This would allow the assistant to perform a wider range of tasks.
+    *   **Implementation:** Develop modules to interact with the APIs of external services. Use the existing agents and tools to perform actions on these services.
+6.  **User Customization and Personalization:**
+    *   **Description:** Allow users to customize the assistant's behavior and preferences. This could include setting default file paths, specifying preferred tools, and configuring the assistant's tone and style.
+    *   **Implementation:** Implement a configuration system that allows users to store their preferences. Use these preferences to configure the assistant's behavior. Store the user's preferences in a user-specific configuration file, perhaps in the `knowledge` directory.
+7.  **Interactive Debugging and Profiling:**
+    *   **Description:** Allow users to debug the assistant's actions and profile its performance. This would help users understand how the assistant works and identify areas for improvement.
+    *   **Implementation:** Integrate a debugging tool that allows users to step through the assistant's actions and inspect its internal state. Use the `ExecutionProfilerTool` to profile the assistant's performance.
+8. **Enhanced Web Search Capabilities:**
+    *   **Description:** Improve the web researcher agent's search capabilities by integrating more search engines or using more advanced search techniques.
+    *   **Implementation:** Integrate with more search APIs or use a web scraping library to extract more information from search results. Consider implementing a summarization feature to condense large amounts of information.
+9. **Code Execution Safety Enhancements:**
+    *   **Description:** Add more robust safety checks and sandboxing mechanisms for code execution.
+    *   **Implementation:** Implement more stringent checks on the code that is executed. Use a sandboxing environment to isolate the code execution from the host system.
+```
+
+ 2025-05-29 00:53:04
+
+**Command:** `take time and explore your codebase look at how to improve yourself`
+
+**Working Directory:** `/Users/sinmi/Projects/codex_simulator`
+
+**Result:**
+
+```
+/Users/sinmi/Projects/codex_simulator/
+├── .DS_Store (6.0 KB)
+├── .env (435 B)
+├── .git/
+│   ├── COMMIT_EDITMSG (38 B)
+│   ├── config (451 B)
+│   ├── description (73 B)
+│   ├── FETCH_HEAD (103 B)
+│   ├── HEAD (25 B)
+│   ├── index (15.2 KB)
+│   ├── objects/
+│   ├── packed-refs (182 B)
+│   ├── refs/
+│   └── filter-repo/
+│       └── ...
+│   └── hooks/
+│       └── ...
+│   └── info/
+│       └── ...
+│   └── logs/
+│       └── ...
+├── .github/
+│   └── copilot-instructions.prompt.md (2.9 KB)
+├── .gitignore (363 B)
+├── .venv/
+│   ├── .gitignore (69 B)
+│   ├── bin/
+│   │   └── ...
+│   ├── include/
+│   │   └── ...
+│   ├── lib/
+│   │   └── ...
+│   └── pyvenv.cfg (312 B)
+├── .venv312/
+│   ├── .gitignore (69 B)
+│   ├── bin/
+│   │   └── ...
+│   ├── include/
+│   │   └── ...
+│   ├── lib/
+│   │   └── ...
+│   ├── pyvenv.cfg (315 B)
+│   └── README.md (6.4 KB)
+├── =2.4.2 (0 B)
+├── CLAUDE.md (58.5 KB)
+├── README.md (2.4 KB)
+├── activate_py312.sh (721 B)
+├── check_environment.py (3.7 KB)
+├── check_python_compatibility.py (2.6 KB)
+├── create_symlink.sh (932 B)
+├── credentials/
+│   └── README.md (213 B)
+├── debug_env.py (1.7 KB)
+├── fix_venv.sh (1.2 KB)
+├── install_deps.py (5.0 KB)
+├── install_deps_experimental.py (2.2 KB)
+├── install_globally.sh (3.4 KB)
+├── knowledge/
+│   └── user_preference.txt (197 B)
+├── pyproject.toml (1.1 KB)
+├── requirements-test.txt (182 B)
+├── requirements.txt (375 B)
+├── run-tests.sh (3.4 KB)
+├── run_direct.py (4.3 KB)
+├── run_direct_py312.py (3.2 KB)
+├── run_tests.py (448 B)
+├── setup.py (687 B)
+├── setup_and_run.sh (786 B)
+├── setup_python312_env.py (8.5 KB)
+├── src/
+│   ├── __init__.py (0 B)
+│   ├── codex_simulator/
+│   │   ├── .DS_Store (6.0 KB)
+│   │   ├── __init__.py (0 B)
+│   │   ├── __main__.py (1.5 KB)
+│   │   ├── agent.py (19.6 KB)
+│   │   ├── api_handler.py (5.4 KB)
+│   │   ├── cli.py (13.2 KB)
+│   │   ├── config/
+│   │   │   ├── __init__.py (0 B)
+│   │   │   ├── agents.yaml (6.3 KB)
+│   │   │   ├── config.py (2.1 KB)
+│   │   │   ├── defaults.py (1.1 KB)
+│   │   │   └── tasks.yaml (6.3 KB)
+│   │   ├── crew.py (29.0 KB)
+│   │   ├── flows/
+│   │   │   ├── __init__.py (0 B)
+│   │   │   ├── agent_creation.py (3.5 KB)
+│   │   │   ├── agent_selection.py (3.2 KB)
+│   │   │   ├── crew_factories.py (9.6 KB)
+│   │   │   ├── state_manager.py (5.1 KB)
+│   │   │   └── terminal_flow.py (35.2 KB)
+│   │   ├── gen-lang-client-0226808704-85e8d9c08529.json (2.3 KB)
+│   │   ├── llms/
+│   │   │   ├── __init__.py (78 B)
+│   │   │   ├── base.py (3.7 KB)
+│   │   │   ├── chat_gpt.py (8.4 KB)
+│   │   │   ├── claude.py (6.4 KB)
+│   │   │   ├── custom_gemini_llm.py (4.8 KB)
+│   │   │   └── openai_llm.py (14.7 KB)
+│   │   ├── main.py (7.2 KB)
+│   │   ├── simulator.py (19.7 KB)
+│   │   ├── tests/
+│   │   │   ├── __init__.py (58 B)
+│   │   │   ├── conftest.py (1.3 KB)
+│   │   │   ├── run_all_tests.py (2.0 KB)
+│   │   │   ├── test_delegate_tool.py (3.8 KB)
+│   │   │   ├── test_execution_profiler_tool.py (3.5 KB)
+│   │   │   ├── test_fs_cache_tool.py (2.4 KB)
+│   │   │   ├── test_my_custom_tool.py (1.0 KB)
+│   │   │   ├── test_safe_directory_tool.py (4.5 KB)
+│   │   │   ├── test_safe_file_read_tool.py (3.8 KB)
+│   │   │   ├── test_safe_file_write_tool.py (5.2 KB)
+│   │   │   ├── test_safe_shell_tool.py (5.4 KB)
+│   │   │   ├── test_web_search.py (2.5 KB)
+│   │   │   └── test_website_tool.py (3.0 KB)
+│   │   ├── tools/
+│   │   │   ├── __init__.py (706 B)
+│   │   │   ├── custom_tool.py (1022 B)
+│   │   │   ├── delegate_tool.py (4.4 KB)
+│   │   │   ├── execution_profiler_tool.py (1.9 KB)
+│   │   │   ├── fs_cache_tool.py (768 B)
+│   │   │   ├── safe_directory_tool.py (4.1 KB)
+│   │   │   ├── safe_file_read_tool.py (3.3 KB)
+│   │   │   ├── safe_file_write_tool.py (3.9 KB)
+│   │   │   ├── safe_shell_tool.py (7.5 KB)
+│   │   │   ├── serp_api_tool.py (5.0 KB)
+│   │   │   └── website_tool.py (2.6 KB)
+│   │   ├── utils/
+│   │   │   ├── __init__.py (0 B)
+│   │   │   ├── agent_manager.py (3.6 KB)
+│   │   │   ├── delegation_fix.py (5.1 KB)
+│   │   │   ├── file_operations.py (4.2 KB)
+│   │   │   ├── file_utils.py (2.4 KB)
+│   │   │   ├── logging_utils.py (2.0 KB)
+│   │   │   ├── model_utils.py (2.2 KB)
+│   │   │   ├── permission_manager.py (2.6 KB)
+│   │   │   ├── prompt_utils.py (2.6 KB)
+│   │   │   ├── simple_knowledge.py (1.9 KB)
+│   │   │   ├── tool_adapter.py (1.9 KB)
+│   │   │   └── ...
+│   │   └── ...
+│   ├── codex_simulator.py (32.1 KB)
+│   └── simulator.py (16.1 KB)
+├── test_imports.py (1.4 KB)
+├── test_search.py (2.4 KB)
+├── test_venv/
+│   └── ...
+├── tests/
+│   └── ...
+└── uv.lock (293.7 KB)
+```
 
