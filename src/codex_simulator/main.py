@@ -3,9 +3,12 @@ import sys
 import os
 import warnings
 import argparse
+import traceback
 from datetime import datetime
 
-from codex_simulator.crew import CodexSimulator
+from .crew import CodexSimulator
+# Keep the import but we won't use it actively
+from .utils.delegation_fix import apply_delegation_fix
 
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
 
@@ -13,6 +16,9 @@ def run():
     """
     Run the crew.
     """
+    # This function call is now a no-op but we keep it for compatibility
+    apply_delegation_fix()
+    
     parser = argparse.ArgumentParser(description='Codex Simulator')
     parser.add_argument('--mode', choices=['report', 'terminal'], default='report', 
                         help='Mode to run (report or terminal)')
@@ -73,6 +79,69 @@ def run_terminal_assistant(show_warning=True):
     except Exception as e:
         print(f"An error occurred: {e}")
 
+def run_terminal_assistant_with_flows(show_warning=True):
+    """Run terminal assistant with flow orchestration"""
+    if show_warning:
+        print("🚀 Starting CodexSimulator with Flow orchestration...")
+        print("⚠️  This assistant can execute code and modify files. Use with caution.")
+        print("✨ Type 'help' for available commands or 'quit' to exit.")
+    
+    # Check Python environment
+    print(f"🔍 Checking Python {sys.version_info.major}.{sys.version_info.minor} environment...")
+    if sys.version_info.major == 3 and sys.version_info.minor >= 10:
+        print(f"✅ Running in Python {sys.version_info.major}.{sys.version_info.minor} environment")
+    else:
+        print(f"⚠️ Detected Python {sys.version_info.major}.{sys.version_info.minor}. Recommended: Python 3.10+")
+    
+    simulator = CodexSimulator()
+    simulator.flow_enabled = True
+    
+    while True:
+        try:
+            command = input("\n💻 Enter command (or 'quit' to exit): ").strip()
+            if command.lower() in ['quit', 'exit']:
+                break
+            
+            result = simulator.terminal_assistant(command)
+            
+            if result.startswith("CLARIFICATION_REQUEST:"):
+                clarification_question = result.replace("CLARIFICATION_REQUEST:", "", 1)
+                print(f"\n⚠️ {clarification_question}")
+                # Optionally, you could loop here to get clarification immediately
+                # or just let the user provide a new, more detailed command next.
+            else:
+                print(f"\n✅ {result}")
+            
+        except KeyboardInterrupt:
+            print("\n👋 Goodbye!")
+            break
+        except Exception as e:
+            print(f"❌ Error: {e}")
+            if os.environ.get("DEBUG") == "1":
+                traceback.print_exc()
+
+def run_hybrid_mode():
+    """Run with intelligent crew/flow selection"""
+    simulator = CodexSimulator()
+    
+    while True:
+        command = input("\n💻 Enter command: ").strip()
+        if command.lower() in ['quit', 'exit']:
+            break
+        
+        # Intelligent selection based on command complexity
+        complexity_score = simulator._assess_command_complexity(command)
+        
+        if complexity_score >= 7:
+            print("🔄 Using Flow orchestration for complex command...")
+            simulator.flow_enabled = True
+        else:
+            print("⚡ Using direct Crew execution for simple command...")
+            simulator.flow_enabled = False
+        
+        result = simulator.terminal_assistant(command)
+        print(f"\n✅ {result}")
+
 def train():
     """
     Train the crew for a given number of iterations.
@@ -108,3 +177,10 @@ def test():
         CodexSimulator().crew().test(n_iterations=int(sys.argv[1]), eval_llm=sys.argv[2], inputs=inputs)
     except Exception as e:
         raise Exception(f"An error occurred while testing the crew: {e}")
+
+def terminal_assistant():
+    """Run the terminal assistant with flow support"""
+    run_terminal_assistant_with_flows()
+
+if __name__ == "__main__":
+    terminal_assistant()

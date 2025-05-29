@@ -1,5 +1,5 @@
 import os
-from typing import List, Type
+from typing import Type, List
 from pydantic import BaseModel, Field
 from crewai.tools import BaseTool
 
@@ -8,52 +8,70 @@ class SafeFileReadToolInput(BaseModel):
     file_path: str = Field(..., description="The path of the file to read.")
 
 class SafeFileReadTool(BaseTool):
-    """A tool to safely read file contents with security checks."""
+    """A tool to safely read file contents with minimal restrictions."""
     name: str = "safe_file_read_tool"
-    description: str = "Safely reads the contents of a file with security restrictions."
+    description: str = "Reads the contents of almost any file, with exceptions for system and security-critical files."
     args_schema: Type[BaseModel] = SafeFileReadToolInput
     
-    # Sensitive files and directories that should not be accessed
-    blocked_paths: List[str] = [
-        ".env", "id_rsa", ".ssh/", "/etc/passwd", "/etc/shadow",
-        "C:\\Windows\\", "C:\\Program Files\\", "C:\\Users\\Administrator\\"
+    # Only critically sensitive files should be blocked
+    blocked_files: List[str] = [
+        "id_rsa", ".ssh/id_rsa", ".env", "credentials.json", "secrets.json",
+        "authorized_keys"
     ]
     
-    # Maximum file size to read (1MB)
-    max_file_size: int = 1024 * 1024
+    # Maximum file size to read (5MB)
+    max_file_size: int = 5 * 1024 * 1024
 
-    def _is_safe_file(self, file_path: str) -> bool:
+    def _is_safe_file(self, file_path: str) -> dict:
         """Check if a file is safe to access."""
         # Convert to absolute path
-        abs_path = os.path.abspath(file_path)
+        abs_path = os.path.abspath(os.path.expanduser(file_path))
         
-        # Check against blocked paths
-        for blocked in self.blocked_paths:
+        # Check against blocked files
+        for blocked in self.blocked_files:
             if blocked in abs_path:
-                return False
+                return {"safe": False, "reason": f"Access to '{blocked}' files is restricted for security reasons"}
+        
+        # Check if the file exists 
+        if not os.path.exists(abs_path):
+            return {"safe": False, "reason": f"File '{abs_path}' does not exist"}
+            
+        # Check if it's a directory
+        if os.path.isdir(abs_path):
+            return {"safe": False, "reason": f"Path '{abs_path}' is a directory, not a file. Use the directory tool instead."}
         
         # Check file size
         try:
-            if os.path.exists(abs_path) and os.path.getsize(abs_path) > self.max_file_size:
-                return False
-        except:
-            pass
+            if os.path.getsize(abs_path) > self.max_file_size:
+                return {"safe": False, "reason": f"File '{abs_path}' exceeds the maximum allowed size of {self.max_file_size/1024/1024:.1f}MB"}
+        except Exception as e:
+            return {"safe": False, "reason": f"Error checking file size: {str(e)}"}
                 
-        return True
+        return {"safe": True, "reason": ""}
 
     def _run(self, file_path: str) -> str:
         """Read the contents of a file if it passes safety checks."""
-        if not self._is_safe_file(file_path):
-            return f"Error: Access to file '{file_path}' is restricted (file may be sensitive, too large, or blocked for security reasons)."
+        safety_check = self._is_safe_file(file_path)
+        if not safety_check["safe"]:
+            return f"Error: {safety_check['reason']}"
         
         try:
-            if not os.path.exists(file_path):
-                return f"Error: File '{file_path}' does not exist."
-                
-            if not os.path.isfile(file_path):
-                return f"Error: Path '{file_path}' is not a file."
+            abs_path = os.path.abspath(os.path.expanduser(file_path))
             
-            with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+            # Try to detect binary files
+            is_binary = False
+            try:
+                with open(abs_path, 'rb') as f:
+                    initial_bytes = f.read(1024)
+                    is_binary = b'\x00' in initial_bytes
+            except:
+                pass
+                
+            # Read and return file contents
+            if is_binary:
+                return f"File '{file_path}' appears to be binary. Cannot display content."
+                
+            with open(abs_path, 'r', encoding='utf-8', errors='replace') as f:
                 content = f.read()
             
             return f"Contents of file '{file_path}':\n\n{content}"
