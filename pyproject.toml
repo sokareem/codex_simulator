@@ -8,7 +8,8 @@ dependencies = [
     "crewai[tools]>=0.120.1,<1.0.0",
     "argparse>=1.4.0",
     "langchain-google-genai>=0.0.1",
-    "google-generativeai>=0.3.0"
+    "google-generativeai>=0.3.0",
+    "pypdf>=4.0.0"  # Added pypdf
 ]
 
 [project.optional-dependencies]

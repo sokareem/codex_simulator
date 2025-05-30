@@ -100,7 +100,8 @@ def install_dependencies_312():
         "beautifulsoup4>=4.12.0",
         "langchain-core>=0.1.0",
         "typing-extensions>=4.6.1",
-        "annotated-types>=0.6.0"
+        "annotated-types>=0.6.0",
+        "pypdf>=4.0.0"  # Added pypdf
     ]
     
     for dep in dependencies:

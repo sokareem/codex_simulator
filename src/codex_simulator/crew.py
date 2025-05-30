@@ -42,6 +42,7 @@ from codex_simulator.utils.simple_knowledge import SimpleKnowledge  # Add this i
 from codex_simulator.tools.fs_cache_tool import FSCacheTool    # new import
 from codex_simulator.tools.execution_profiler_tool import ExecutionProfilerTool  # new import
 from codex_simulator.tools.delegate_tool import DelegateTool  # Import our new delegate tool
+from codex_simulator.tools.pdf_reader_tool import PDFReaderTool # Import PDFReaderTool
 
 # Add MCP imports
 from .mcp import MCPClient, MCPToolWrapper, MCPConnectionConfig, create_mcp_client, wrap_tools_with_mcp
@@ -590,6 +591,8 @@ You can also use natural language queries like:
                 SerpAPITool(),
                 WebsiteTool()
             ]
+        elif agent_type == "pdf": # New agent type for PDF
+            tools = [PDFReaderTool()]
         elif agent_type == "terminal":
             # Terminal commander gets delegation tool
             tools = [DelegateTool(agents_dict=self._get_agents_dict())]
@@ -606,7 +609,13 @@ You can also use natural language queries like:
         """Get dictionary of available agents for delegation"""
         # This will be populated with actual agent instances
         # For now, return empty dict to avoid circular dependencies
-        return {}
+        # Update this when agents are fully defined
+        return {
+            "FileNavigator": self.file_navigator(),
+            "CodeExecutor": self.code_executor(),
+            "WebResearcher": self.web_researcher(),
+            "PDFDocumentAnalyst": self.pdf_document_analyst() # Add PDF agent
+        }
     
     def _create_file_navigator_agent(self) -> Agent:
         """Create the File Navigator agent"""
@@ -646,6 +655,19 @@ You can also use natural language queries like:
             verbose=True,
             llm=self._get_llm()
         )
+
+    def _create_pdf_document_analyst_agent(self) -> Agent:
+        """Create the PDF Document Analyst agent"""
+        return Agent(
+            role='Expert PDF Document Analyst',
+            goal='Read, analyze, summarize, and extract information from PDF documents. Break down large PDFs into manageable chunks for processing.',
+            backstory="""You are a specialist in handling PDF documents. You can meticulously read through PDF content, 
+            understand its structure, extract key information, provide summaries, and answer questions based on the document.
+            You are also skilled at breaking down lengthy PDF documents into smaller, more digestible chunks for further analysis.""",
+            tools=self._create_tools("pdf"),
+            verbose=True,
+            llm=self._get_llm()
+        )
     
     def _create_terminal_commander_agent(self) -> Agent:
         """Create the Terminal Commander agent with MCP-aware delegation"""
@@ -653,7 +675,8 @@ You can also use natural language queries like:
         agents_dict = {
             "FileNavigator": self._create_file_navigator_agent(),
             "CodeExecutor": self._create_code_executor_agent(),
-            "WebResearcher": self._create_web_researcher_agent()
+            "WebResearcher": self._create_web_researcher_agent(),
+            "PDFDocumentAnalyst": self._create_pdf_document_analyst_agent() # Add PDF agent
         }
         
         # Create delegation tool with MCP support
@@ -803,6 +826,22 @@ You can also use natural language queries like:
         )
 
     @agent
+    def pdf_document_analyst(self) -> Agent:
+        """Specialist agent for PDF document analysis."""
+        return Agent(
+            config=self.agents_config.get('pdf_document_analyst', { # Provide default config
+                'role': 'Expert PDF Document Analyst',
+                'goal': 'Read, analyze, summarize, and extract information from PDF documents. Break down large PDFs into manageable chunks for processing.',
+                'backstory': """You are a specialist in handling PDF documents. You can meticulously read through PDF content, 
+                understand its structure, extract key information, provide summaries, and answer questions based on the document.
+                You are also skilled at breaking down lengthy PDF documents into smaller, more digestible chunks for further analysis."""
+            }),
+            llm=self._get_llm(),
+            tools=[PDFReaderTool()], # Directly assign the tool
+            verbose=True
+        )
+
+    @agent
     def performance_monitor(self) -> Agent:
         """New agent to profile and report execution metrics."""
         return Agent(
@@ -856,6 +895,24 @@ You can also use natural language queries like:
             config=self.tasks_config['web_search_task'], # type: ignore[index]
         )
 
+    @task
+    def analyze_pdf_task(self) -> Task:
+        """Task for analyzing PDF documents."""
+        return Task(
+            config=self.tasks_config.get('analyze_pdf_task', { # Provide default config
+                'description': (
+                    "Analyze the PDF document located at '{pdf_path}'. "
+                    "Extract key information, summarize its content, or answer specific questions based on the user's request. "
+                    "If the PDF is large, consider breaking it down first. "
+                    "User's specific request for this PDF: {user_query_about_pdf}"
+                ),
+                'expected_output': (
+                    "A comprehensive analysis of the PDF document, addressing the user's specific query. "
+                    "This could be a summary, extracted key points, answers to questions, or chunked content if requested."
+                )
+            })
+        )
+
     @crew
     def crew(self) -> Crew:
         """Creates the standard report generation crew"""
@@ -881,14 +938,16 @@ You can also use natural language queries like:
         file_nav_agent = self.file_navigator()
         code_exec_agent = self.code_executor()
         web_research_agent = self.web_researcher()
+        pdf_analyst_agent = self.pdf_document_analyst() # Add PDF agent
         
         # Apply tool patches to fix unhashable type errors
         patch_tool_methods(file_nav_agent)
         patch_tool_methods(code_exec_agent)
         patch_tool_methods(web_research_agent)
+        patch_tool_methods(pdf_analyst_agent) # Patch PDF agent
         
         # Apply the cleanup to all agents that will be part of this crew
-        all_agents_in_this_crew_setup = [terminal_agent, file_nav_agent, code_exec_agent, web_research_agent]
+        all_agents_in_this_crew_setup = [terminal_agent, file_nav_agent, code_exec_agent, web_research_agent, pdf_analyst_agent]
         for ag in all_agents_in_this_crew_setup:
             remove_competing_delegation_tools(ag)
         
@@ -896,7 +955,8 @@ You can also use natural language queries like:
         agent_registry = {
             "FileNavigator": file_nav_agent,
             "CodeExecutor": code_exec_agent,
-            "WebResearcher": web_research_agent
+            "WebResearcher": web_research_agent,
+            "PDFDocumentAnalyst": pdf_analyst_agent # Add PDF agent to registry
         }
         
         # Add tools to manager - explicitly including our own delegate tool
@@ -913,7 +973,7 @@ You can also use natural language queries like:
             f"Command history: {', '.join(self.command_history[-5:]) if self.command_history else 'None'}\n"
             f"Session context: {claude_context[:1000] + '...' if len(claude_context) > 1000 else claude_context}\n\n"
             f"CRITICAL INSTRUCTION FOR MANAGER (YOU - {terminal_agent.role}): You are a manager. Your role is to understand the task and delegate sub-tasks to your specialist coworkers using the delegation tool.\n"
-            f"Available specialists: FileNavigator (file operations), CodeExecutor (code execution), WebResearcher (web searches).\n"
+            f"Available specialists: FileNavigator (file operations), CodeExecutor (code execution), WebResearcher (web searches), PDFDocumentAnalyst (PDF analysis).\n"
             f"After receiving results from coworkers, synthesize them into a final answer for the user.\n"
             f"Provide a clear and helpful final response to the user's query, reflecting the action taken or delegated. "
             f"If the command involved a directory change, make sure to include the new directory path in your final response."
@@ -930,7 +990,7 @@ You can also use natural language queries like:
         
         # Use sequential process instead of hierarchical to simplify delegation
         crew = Crew(
-            agents=[terminal_agent, file_nav_agent, code_exec_agent, web_research_agent],
+            agents=[terminal_agent, file_nav_agent, code_exec_agent, web_research_agent, pdf_analyst_agent], # Add PDF agent to crew
             tasks=[task],
             verbose=True,
             knowledge=self._create_knowledge_sources(),
