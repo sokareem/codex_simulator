@@ -1,4 +1,4 @@
-#!/Users/sinmi/Projects/codex_simulator/.venv312/bin/python
+#!/Users/sinmi/Projects/codex_simulator/.venv312/bin/python3.12
 """A command line tool for extracting text and images from PDF and
 output it to plain text, html, xml or tags.
 """

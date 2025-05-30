@@ -29,6 +29,7 @@ train = "codex_simulator.main:train"
 replay = "codex_simulator.main:replay"
 test = "codex_simulator.main:test"
 run_all_tests = "src.codex_simulator.tests.run_all_tests:run_tests"
+codex-mcp-server = "codex_simulator.main:run_mcp_server_standalone"
 
 [build-system]
 requires = ["hatchling"]

@@ -38,7 +38,8 @@ def run():
     args = parser.parse_args()
     
     if args.mode == 'terminal':
-        run_terminal_assistant_with_flows(show_warning=not args.no_warning)
+        # Removed show_warning argument as it's not accepted
+        run_terminal_assistant_with_flows() 
     else:
         run_report(topic=args.topic)
         

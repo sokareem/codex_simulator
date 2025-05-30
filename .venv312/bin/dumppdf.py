@@ -1,4 +1,4 @@
-#!/Users/sinmi/Projects/codex_simulator/.venv312/bin/python
+#!/Users/sinmi/Projects/codex_simulator/.venv312/bin/python3.12
 """Extract pdf structure in XML format"""
 
 import logging
