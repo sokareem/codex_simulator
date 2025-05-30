@@ -125,3 +125,33 @@ class FlowStateManager:
         self.session_state.current_location = None
         if self.session_state.location_permission == "session":
             self.session_state.location_permission = "denied" # Reset session permission
+
+from typing import Dict, Any, Optional
+from datetime import datetime
+import json
+import os
+
+class StateManager:
+    """Manages state and context across agent interactions"""
+    
+    def __init__(self, use_mcp: bool = False, mcp_client=None):
+        self.use_mcp = use_mcp
+        self.mcp_client = mcp_client
+        self.session_state = SessionState()
+        
+    def create_crew_context(self, operation_type: str) -> Dict[str, Any]:
+        """Create context for crew operations"""
+        return {
+            'operation_type': operation_type,
+            'timestamp': datetime.now().isoformat(),
+            'cwd': self.session_state.current_directory,
+            'mcp_enabled': self.use_mcp
+        }
+
+class SessionState:
+    """Holds session-specific state information"""
+    
+    def __init__(self):
+        self.current_directory = os.getcwd()
+        self.command_history = []
+        self.user_preferences = {}

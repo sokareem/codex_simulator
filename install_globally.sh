@@ -29,6 +29,13 @@ echo -e "${BLUE}Installing from: ${SCRIPT_DIR}${NC}"
 PYTHON_VERSION=$(python3 --version)
 echo -e "${BLUE}Using ${PYTHON_VERSION}${NC}"
 
+# Check Python version
+python_version=$(python3 --version 2>&1 | cut -d' ' -f2 | cut -d'.' -f1,2)
+if [[ $(echo "$python_version < 3.10" | bc -l) -eq 1 ]]; then
+    echo "❌ Python 3.10+ required. Current version: $python_version"
+    exit 1
+fi
+
 # Install dependencies and package
 echo -e "${BLUE}Installing package and dependencies...${NC}"
 python3 -m pip install --upgrade pip
@@ -61,6 +68,20 @@ if [[ -d "/usr/local/bin" && -w "/usr/local/bin" ]]; then
         echo -e "${GREEN}✓ You can now use 'codex-terminal' from anywhere${NC}"
     fi
 fi
+
+# Create global command aliases
+echo "Creating global command aliases..."
+
+# Add to PATH if not already there
+if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
+fi
+
+echo "✅ CodexSimulator installed globally!"
+echo "🔧 Available commands:"
+echo "   codex-terminal - Main terminal assistant"
+echo "   codex-mcp-server - Start MCP server"
 
 echo -e "${GREEN}===============================================${NC}"
 echo -e "${GREEN}Available commands after installation:${NC}"

@@ -10,7 +10,7 @@ from .crew import CodexSimulator
 # Keep the import but we won't use it actively
 from .utils.delegation_fix import apply_delegation_fix
 
-warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
+warnings.filterwarnings("ignore", category="SyntaxWarning", module="pysbd")
 
 import asyncio
 from typing import Dict, List, Any, Optional, Union
@@ -124,12 +124,6 @@ async def run_terminal_assistant_with_flows_async():
         mcp_server_url=mcp_server_url
     )
     
-    # Wait for MCP initialization if enabled
-    # The following sleep is removed as MCP initialization should be handled
-    # by the CodexSimulator instance itself, typically within its async methods.
-    # if use_mcp:
-    #     await asyncio.sleep(1.0)  # Give MCP time to initialize
-    
     try:
         print("💻 Enter command (or 'quit' to exit):")
         
@@ -192,7 +186,7 @@ def run_hybrid_mode():
 
 def train():
     """
-    Train the crew for a given number of iterations.
+    Train the crew.
     """
     inputs = {
         "topic": "AI LLMs",

@@ -1,10 +1,222 @@
-from typing import Dict, Any, Optional
-from crewai import Crew, Process, Agent, Task
+import asyncio
+from typing import Dict, List, Any, Optional
+from crewai import Agent, Task, Crew
 from ..flows.state_manager import LocationData # Import LocationData
+from ..mcp import MCPClient, wrap_tools_with_mcp
+from ..tools import (
+    SafeDirectoryTool, SafeFileReadTool, SafeFileWriteTool,
+    SafeShellTool, SerpAPITool, WebsiteTool
+)
+from ..tools.delegate_tool import DelegateTool, MCPDelegateTool
 
 class CrewFactory:
-    """Factory for creating specialized crews within flows"""
+    """Factory for creating specialized crews with optional MCP integration"""
     
+    def __init__(self, llm, use_mcp: bool = False, mcp_client: Optional[MCPClient] = None):
+        self.llm = llm
+        self.use_mcp = use_mcp
+        self.mcp_client = mcp_client
+    
+    def _wrap_tools_if_mcp(self, tools: List[Any]) -> List[Any]:
+        """Wrap tools with MCP if enabled"""
+        if self.use_mcp and self.mcp_client and tools:
+            tool_names = [getattr(tool, 'name', str(tool)) for tool in tools]
+            return wrap_tools_with_mcp(tool_names, self.mcp_client)
+        return tools
+    
+    def create_file_crew(self, context: Dict[str, Any]) -> Crew:
+        """Create a crew specialized for file operations with MCP support"""
+        
+        tools = [
+            SafeDirectoryTool(),
+            SafeFileReadTool(), 
+            SafeFileWriteTool()
+        ]
+        
+        # Wrap with MCP if enabled
+        tools = self._wrap_tools_if_mcp(tools)
+        
+        file_navigator = Agent(
+            role='Expert File System Navigator',
+            goal='Perform file operations efficiently and safely',
+            backstory="""You are an expert in file system operations with extensive knowledge 
+            of directory navigation, file manipulation, and system organization.""",
+            tools=tools,
+            verbose=True,
+            llm=self.llm
+        )
+        
+        file_task = Task(
+            description=context.get('command', 'Perform file operation'),
+            expected_output="File operation completed with results",
+            agent=file_navigator
+        )
+        
+        crew = Crew(
+            agents=[file_navigator],
+            tasks=[file_task],
+            verbose=True,
+            process=Process.sequential
+        )
+        
+        # Add MCP context if available
+        if self.use_mcp and self.mcp_client:
+            asyncio.create_task(self._update_mcp_context(context))
+        
+        return crew
+    
+    def create_code_crew(self, context: Dict[str, Any]) -> Crew:
+        """Create a crew specialized for code execution with MCP support"""
+        
+        tools = [SafeShellTool(), SafeFileReadTool(), SafeFileWriteTool()]
+        tools = self._wrap_tools_if_mcp(tools)
+        
+        code_executor = Agent(
+            role='Secure Code Execution Specialist',
+            goal='Execute code and commands safely with performance monitoring',
+            backstory="""You are a security-focused code execution expert with deep knowledge 
+            of sandboxing, performance optimization, and safe execution practices.""",
+            tools=tools,
+            verbose=True,
+            llm=self.llm
+        )
+        
+        code_task = Task(
+            description=context.get('command', 'Execute code or command'),
+            expected_output="Code execution completed with results and performance metrics",
+            agent=code_executor
+        )
+        
+        crew = Crew(
+            agents=[code_executor],
+            tasks=[code_task],
+            verbose=True,
+            process=Process.sequential
+        )
+        
+        if self.use_mcp and self.mcp_client:
+            asyncio.create_task(self._update_mcp_context(context))
+        
+        return crew
+    
+    def create_web_crew(self, context: Dict[str, Any]) -> Crew:
+        """Create a crew specialized for web research with MCP support"""
+        
+        tools = [SerpAPITool(), WebsiteTool()]
+        tools = self._wrap_tools_if_mcp(tools)
+        
+        web_researcher = Agent(
+            role='Expert Web Research Specialist',
+            goal='Conduct thorough research and gather accurate information',
+            backstory="""You are an expert researcher with exceptional skills in finding, 
+            evaluating, and synthesizing information from diverse web sources.""",
+            tools=tools,
+            verbose=True,
+            llm=self.llm
+        )
+        
+        research_task = Task(
+            description=context.get('command', 'Conduct web research'),
+            expected_output="Comprehensive research results with sources and analysis",
+            agent=web_researcher
+        )
+        
+        crew = Crew(
+            agents=[web_researcher],
+            tasks=[research_task],
+            verbose=True,
+            process=Process.sequential
+        )
+        
+        if self.use_mcp and self.mcp_client:
+            asyncio.create_task(self._update_mcp_context(context))
+        
+        return crew
+    
+    def create_terminal_crew(self, context: Dict[str, Any]) -> Crew:
+        """Create a comprehensive crew for general terminal operations."""
+        
+        # Create agents
+        agents_dict = {}
+        
+        file_agent = Agent(
+            role="File System Operations Expert",
+            goal="Navigate file systems, read files, and manage directories safely",
+            backstory="I am an expert in file system operations.",
+            tools=[SafeDirectoryTool(), SafeFileReadTool(), SafeFileWriteTool()],
+            llm=self.llm,
+            verbose=True
+        )
+        agents_dict["File System Operations Expert"] = file_agent
+        
+        code_agent = Agent(
+            role="Secure Code and Command Execution Specialist", 
+            goal="Execute code and commands safely",
+            backstory="I specialize in secure code execution.",
+            tools=[SafeShellTool(), SafeFileReadTool(), SafeFileWriteTool()],
+            llm=self.llm,
+            verbose=True
+        )
+        agents_dict["Secure Code and Command Execution Specialist"] = code_agent
+        
+        research_agent = Agent(
+            role="Internet Research Analyst",
+            goal="Conduct web searches and provide information",
+            backstory="I am an expert researcher.",
+            tools=[SerpAPITool(), WebsiteTool()],
+            llm=self.llm,
+            verbose=True
+        )
+        agents_dict["Internet Research Analyst"] = research_agent
+        
+        # Choose delegation tool based on MCP availability
+        if self.use_mcp and self.mcp_client:
+            delegate_tool = MCPDelegateTool(agents_dict=agents_dict, mcp_client=self.mcp_client)
+        else:
+            delegate_tool = DelegateTool(agents_dict=agents_dict)
+        
+        # Create terminal commander
+        terminal_agent = Agent(
+            role="Terminal Command Orchestrator and AI Assistant",
+            goal="Understand user commands and delegate to appropriate specialists",
+            backstory="I coordinate between specialized agents to handle complex requests.",
+            tools=[delegate_tool],
+            llm=self.llm,
+            verbose=True
+        )
+        
+        # Create task
+        task = Task(
+            description=f"Handle this request: {context.get('command', 'No command specified')}",
+            agent=terminal_agent,
+            expected_output="A comprehensive response addressing the user's request."
+        )
+        
+        all_agents = [terminal_agent, file_agent, code_agent, research_agent]
+        
+        return Crew(
+            agents=all_agents,
+            tasks=[task],
+            process=Process.sequential,
+            verbose=True
+        )
+    
+    async def _update_mcp_context(self, context: Dict[str, Any]):
+        """Update MCP server with current context"""
+        if self.mcp_client:
+            try:
+                await self.mcp_client.update_state(
+                    state_updates={
+                        "current_command": context.get('command', ''),
+                        "cwd": context.get('cwd', ''),
+                        "timestamp": context.get('timestamp', ''),
+                        "context_data": context
+                    },
+                    scope="session"
+                )
+            except Exception as e:
+                print(f"Failed to update MCP context: {e}")
+
     @staticmethod
     def create_file_operations_crew(state_context: Dict) -> Crew:
         """Create a crew optimized for file operations"""
