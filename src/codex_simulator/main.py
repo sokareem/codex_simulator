@@ -1,0 +1,267 @@
+#!/usr/bin/env python
+import sys
+import os
+import warnings
+import argparse
+import traceback
+from datetime import datetime
+
+from .crew import CodexSimulator
+# Keep the import but we won't use it actively
+from .utils.delegation_fix import apply_delegation_fix
+
+warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
+
+import asyncio
+from typing import Dict, List, Any, Optional, Union
+
+from crewai import Agent, Task, Crew, Process, Flow
+from crewai.flow.flow import listen, or_
+
+# Add MCP imports
+from .mcp import MCPClient, MCPConnectionConfig, create_mcp_client
+
+def run():
+    """
+    Run the crew.
+    """
+    # This function call is now a no-op but we keep it for compatibility
+    apply_delegation_fix()
+    
+    parser = argparse.ArgumentParser(description='Codex Simulator')
+    parser.add_argument('--mode', choices=['report', 'terminal'], default='terminal', 
+                        help='Mode to run (report or terminal)')
+    parser.add_argument('--no-warning', action='store_true', 
+                        help='Disable safety warning for terminal mode')
+    parser.add_argument('--topic', default='AI LLMs', 
+                        help='Topic for the report mode')
+    args = parser.parse_args()
+    
+    if args.mode == 'terminal':
+        # Removed show_warning argument as it's not accepted
+        run_terminal_assistant_with_flows() 
+    else:
+        run_report(topic=args.topic)
+        
+def run_report(topic='AI LLMs'):
+    """Run the standard report generation crew"""
+    inputs = {
+        'topic': topic,
+        'current_year': str(datetime.now().year),
+        # Add dummy values for terminal-specific template variables to prevent errors
+        'user_command': 'report_generation',
+        'cwd': os.getcwd(),
+        'file_request': 'none',
+        'code_snippet': 'none',
+        'search_query': f'Information about {topic}',
+        'command': f'Generate report about {topic}'
+    }
+    
+    try:
+        print(f"Running report generation on topic: {topic}")
+        # Create a specific crew instance for report generation
+        simulator = CodexSimulator()
+        # Use only the necessary agents for report generation
+        report_crew = simulator.create_report_crew()
+        report_crew.kickoff(inputs=inputs)
+        print(f"Report completed! See report.md for results.")
+    except Exception as e:
+        print(f"Error running report: {str(e)}")
+        if os.environ.get("DEBUG") == "1":
+            traceback.print_exc()
+        print("\nTrying run_direct_py312.py might be more reliable for now.")
+
+def run_terminal_assistant(show_warning=True):
+    """Run the terminal assistant in interactive mode"""
+    crew = CodexSimulator()
+    
+    if show_warning:
+        print("=" * 80)
+        print("CLAUDE CODE TERMINAL ASSISTANT - SAFETY WARNING")
+        print("=" * 80)
+        print("This assistant can execute commands on your system. While it has safety measures,")
+        print("you should review any commands before allowing them to execute.")
+        print("The assistant will only run in the current directory and subdirectories.")
+        print("Type 'exit' or 'quit' to exit the assistant.")
+        print("=" * 80)
+    
+    print("Claude Code Terminal Assistant initialized.")
+    print(f"Current directory: {os.getcwd()}")
+    print("How can I help you today?")
+    
+    try:
+        while True:
+            command = input("\n> ")
+            if command.lower() in ['exit', 'quit']:
+                print("Exiting Claude Code Terminal Assistant. Goodbye!")
+                break
+                
+            result = crew.terminal_assistant(command)
+            print(f"\n{result}")
+    except KeyboardInterrupt:
+        print("\nExiting Claude Code Terminal Assistant. Goodbye!")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+async def run_terminal_assistant_with_flows_async():
+    """Async version of the terminal assistant with MCP integration support"""
+    # Check for MCP configuration
+    use_mcp = os.getenv('USE_MCP', 'false').lower() == 'true'
+    mcp_server_url = os.getenv('MCP_SERVER_URL', 'http://localhost:8000')
+    
+    print("🚀 Starting CodexSimulator with Flow orchestration...")
+    if use_mcp:
+        print(f"🔗 MCP integration enabled - Server: {mcp_server_url}")
+    
+    # Check Python version
+    python_version = sys.version_info
+    if python_version.major == 3 and python_version.minor >= 12:
+        print("🔍 Checking Python 3.12 environment...")
+        print("✅ Running in Python 3.12 environment")
+    
+    # Initialize with MCP support
+    assistant = CodexSimulator(
+        use_mcp=use_mcp,
+        mcp_server_url=mcp_server_url
+    )
+    
+    # Wait for MCP initialization if enabled
+    # The following sleep is removed as MCP initialization should be handled
+    # by the CodexSimulator instance itself, typically within its async methods.
+    # if use_mcp:
+    #     await asyncio.sleep(1.0)  # Give MCP time to initialize
+    
+    try:
+        print("💻 Enter command (or 'quit' to exit):")
+        
+        while True:
+            try:
+                # Get user input
+                command = input("> ").strip()
+                
+                if command.lower() in ['quit', 'exit']:
+                    print("👋 Goodbye!")
+                    break
+                
+                if not command:
+                    continue
+                
+                # Process command
+                result = await assistant.terminal_assistant(command)
+                print(result)
+                
+            except KeyboardInterrupt:
+                print("\n👋 Goodbye!")
+                break
+            except Exception as e:
+                print(f"❌ Error: {e}")
+                
+    finally:
+        # Cleanup MCP connection
+        await assistant.cleanup_mcp()
+
+def run_terminal_assistant_with_flows():
+    """Synchronous wrapper for async terminal assistant"""
+    try:
+        asyncio.run(run_terminal_assistant_with_flows_async())
+    except KeyboardInterrupt:
+        print("\n👋 Goodbye!")
+    except Exception as e:
+        print(f"❌ Startup error: {e}")
+
+def run_hybrid_mode():
+    """Run with intelligent crew/flow selection"""
+    simulator = CodexSimulator()
+    
+    while True:
+        command = input("\n💻 Enter command: ").strip()
+        if command.lower() in ['quit', 'exit']:
+            break
+        
+        # Intelligent selection based on command complexity
+        complexity_score = simulator._assess_command_complexity(command)
+        
+        if complexity_score >= 7:
+            print("🔄 Using Flow orchestration for complex command...")
+            simulator.flow_enabled = True
+        else:
+            print("⚡ Using direct Crew execution for simple command...")
+            simulator.flow_enabled = False
+        
+        result = simulator.terminal_assistant(command)
+        print(f"\n✅ {result}")
+
+def train():
+    """
+    Train the crew for a given number of iterations.
+    """
+    inputs = {
+        "topic": "AI LLMs",
+        'current_year': str(datetime.now().year)
+    }
+    try:
+        CodexSimulator().crew().train(n_iterations=int(sys.argv[1]), filename=sys.argv[2], inputs=inputs)
+    except Exception as e:
+        raise Exception(f"An error occurred while training the crew: {e}")
+
+def replay():
+    """
+    Replay the crew execution from a specific task.
+    """
+    try:
+        CodexSimulator().crew().replay(task_id=sys.argv[1])
+    except Exception as e:
+        raise Exception(f"An error occurred while replaying the crew: {e}")
+
+def test():
+    """
+    Test the crew execution and returns the results.
+    """
+    inputs = {
+        "topic": "AI LLMs",
+        "current_year": str(datetime.now().year)
+    }
+    
+    try:
+        CodexSimulator().crew().test(n_iterations=int(sys.argv[1]), eval_llm=sys.argv[2], inputs=inputs)
+    except Exception as e:
+        raise Exception(f"An error occurred while testing the crew: {e}")
+
+def run_mcp_server_standalone():
+    """Run standalone MCP server for development"""
+    from .mcp.server import run_mcp_server
+    from .tools import (
+        SafeDirectoryTool, SafeFileReadTool, SafeFileWriteTool,
+        SafeShellTool, SerpAPITool, WebsiteTool
+    )
+    from .tools.pdf_reader_tool import PDFReaderTool # Added import
+    
+    print("🚀 Starting standalone MCP server...")
+    
+    # Create tool instances for registration
+    tools = {
+        "safe_directory_tool": SafeDirectoryTool()._run,
+        "safe_file_read_tool": SafeFileReadTool()._run,
+        "safe_file_write_tool": SafeFileWriteTool()._run,
+        "safe_shell_tool": SafeShellTool()._run,
+        "serp_api_tool": SerpAPITool()._run,
+        "website_tool": WebsiteTool()._run,
+        "pdf_reader_tool": PDFReaderTool()._run # Added PDFReaderTool
+    }
+    
+    # Run server with registered tools
+    asyncio.run(run_mcp_server(
+        host="localhost",
+        port=8000,
+        tools=tools
+    ))
+
+def terminal_assistant():
+    """Run the terminal assistant with flow support"""
+    run_terminal_assistant_with_flows()
+
+if __name__ == "__main__":
+    if len(sys.argv) > 1 and sys.argv[1] == "mcp-server":
+        run_mcp_server_standalone()
+    else:
+        run_terminal_assistant_with_flows()
