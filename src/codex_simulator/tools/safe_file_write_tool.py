@@ -1,91 +1,57 @@
 import os
-from typing import Type, Dict, List, Optional
-from pydantic import BaseModel, Field
-from crewai.tools import BaseTool
-from codex_simulator.utils.permission_manager import PermissionManager
+from pathlib import Path
+from typing import Optional, Type, Union
 
-class SafeFileWriteToolInput(BaseModel):
-    """Input for the SafeFileWriteTool."""
-    file_path: str = Field(..., description="Path to the file to write to")
-    content: str = Field(..., description="Content to write to the file")
-    append: bool = Field(False, description="Whether to append to the file or overwrite it")
+from crewai_tools import BaseTool
+from pydantic import BaseModel, Field
+
+from ..utils.permission_manager import PermissionManager
+
+
+class SafeFileWriteToolSchema(BaseModel):
+    file_path: str = Field(..., description="Path to the file to write")
+    text: str = Field(..., description="Content to write to the file")
+
 
 class SafeFileWriteTool(BaseTool):
-    """A tool to safely write to files with user permission."""
-    name: str = "safe_file_write_tool"
-    description: str = "Writes content to files after obtaining user permission. Requires approval before writing."
-    args_schema: Type[BaseModel] = SafeFileWriteToolInput
+    name: str = "SafeFileWriteTool"
+    description: str = "Writes content to a file safely with permission checks"
+    args_schema: Type[BaseModel] = SafeFileWriteToolSchema
     
-    # Define permission_manager as a class field to avoid Pydantic errors
-    permission_manager: Optional[PermissionManager] = None
+    # Add model config to allow arbitrary types
+    model_config = {"arbitrary_types_allowed": True}
     
-    # Only critically dangerous files should be blocked
-    blocked_files: List[str] = [
-        ".bashrc", ".zshrc", ".bash_profile", ".ssh/config", 
-        "authorized_keys", "known_hosts", "id_rsa", "id_rsa.pub"
-    ]
-    
-    # Don't allow writing to system-critical paths
-    blocked_paths: List[str] = [
-        "/etc", "/var", "/bin", "/sbin", "/usr/bin", "/usr/sbin", "/lib", "/root", 
-        "/boot", "/dev", "/proc", "/sys", "/tmp"
-    ]
-    
-    def __init__(self, allowed_files: List[str] = None):
-        """Initialize the tool with allowed files and create a permission manager."""
-        super().__init__()
-        if allowed_files:
-            self.blocked_files = [f for f in self.blocked_files if f not in allowed_files]
-        self.permission_manager = PermissionManager()
+    permission_manager: Optional[PermissionManager] = Field(default=None)
 
-    def _is_safe_path(self, file_path: str) -> Dict[str, bool]:
-        """Check if a file path is safe to write to."""
-        # Normalize the path
-        file_path = os.path.abspath(os.path.expanduser(file_path))
-        
-        # Check the filename for critical system files
-        filename = os.path.basename(file_path)
-        if filename in self.blocked_files:
-            return {
-                "safe": False, 
-                "reason": f"File '{filename}' is restricted for security reasons."
-            }
-        
-        # Check for blocked system paths
-        for blocked in self.blocked_paths:
-            blocked = os.path.abspath(os.path.expanduser(blocked))
-            if file_path.startswith(blocked):
-                return {"safe": False, "reason": f"Path contains blocked directory: '{blocked}'"}
-        
-        return {"safe": True, "reason": ""}
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if self.permission_manager is None:
+            self.permission_manager = PermissionManager()
 
-    def _run(self, file_path: str, content: str, append: bool = False) -> str:
-        """Write to the file if it passes safety checks and user approves."""
-        # Check if the path is safe
-        safety_check = self._is_safe_path(file_path)
-        if not safety_check["safe"]:
-            return f"Error: {safety_check['reason']}"
-        
+    def _run(self, file_path: str, text: str) -> str:
+        """Write content to a file with safety checks"""
         try:
-            file_path = os.path.abspath(os.path.expanduser(file_path))
-            operation = "append to" if append else "write to"
+            # Convert to Path object
+            path = Path(file_path).resolve()
             
-            # Request permission from the user
-            if not self.permission_manager.request_file_write_permission(
-                file_path, content, operation
-            ):
-                return f"Operation cancelled: {operation} {file_path}"
+            # Check permissions
+            if not self.permission_manager.check_tool_permission("file_write", str(path)):
+                return f"Permission denied: File write not allowed for {path}"
             
             # Create directory if it doesn't exist
-            directory = os.path.dirname(file_path)
-            if directory and not os.path.exists(directory):
-                os.makedirs(directory)
-                
-            # Write the file after permission is granted
-            mode = "a" if append else "w"
-            with open(file_path, mode, encoding="utf-8") as file:
-                file.write(content)
+            path.parent.mkdir(parents=True, exist_ok=True)
             
-            return f"Successfully {operation} {file_path}"
+            # Write the file
+            with open(path, 'w', encoding='utf-8') as f:
+                f.write(text)
+            
+            return f"Successfully wrote {len(text)} characters to {path}"
+            
+        except PermissionError:
+            return f"Permission error: Cannot write to {file_path}"
         except Exception as e:
-            return f"Error writing to file: {str(e)}"
+            return f"Error writing file {file_path}: {str(e)}"
+
+    # For backward compatibility
+    def run(self, file_path: str, text: str) -> str:
+        return self._run(file_path, text)

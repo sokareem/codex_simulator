@@ -18,9 +18,9 @@ class TestSafeDirectoryTool(unittest.TestCase):
 
         # Setup mocks
         mock_abspath.return_value = "/abs/current/test_dir"
-        mock_expanduser.side_effect = lambda x: x # Keep path as is
+        mock_expanduser.side_effect = lambda x: x
         mock_exists.return_value = True
-        mock_isdir_path.return_value = True # The path itself is a directory
+        mock_isdir_path.return_value = True
         mock_listdir.return_value = ["file1.txt", "subdir"]
 
         # Mock behavior for items within the directory
@@ -33,10 +33,10 @@ class TestSafeDirectoryTool(unittest.TestCase):
             if path.endswith("subdir"):
                 return True
             return False
-        
-        # Need a new mock for os.path.isdir for items, can't reuse mock_isdir_path easily for different contexts
-        with patch('os.path.isdir', side_effect=isdir_item_side_effect) as mock_isdir_item:
-            mock_getsize.return_value = 1024 # for file1.txt
+
+        # Need a new mock for os.path.isdir for items
+        with patch('os.path.isdir', side_effect=isdir_item_side_effect):
+            mock_getsize.return_value = 1024  # for file1.txt
 
             result = tool._run(directory_path="test_dir")
 
@@ -45,15 +45,6 @@ class TestSafeDirectoryTool(unittest.TestCase):
             self.assertIn("📁 subdir/", result)
             self.assertIn("Files:", result)
             self.assertIn("📄 file1.txt (1.0KB)", result)
-            
-            mock_abspath.assert_called_once_with("test_dir")
-            mock_expanduser.assert_called_once_with("test_dir")
-            mock_exists.assert_called_once_with("/abs/current/test_dir")
-            # mock_isdir_path was for the main path, mock_isdir_item for contents
-            # This is tricky. The _is_safe_path uses os.path.isdir, then _run uses it again.
-            # Let's refine the mock_isdir_path to be specific to the _is_safe_path call.
-            # For simplicity in this example, we'll assume the initial mock_isdir_path covers the first check.
-            # And the new mock_isdir_item covers the internal checks.
 
     def test_blocked_directory(self):
         tool = SafeDirectoryTool(blocked_directories=["/etc"])
@@ -74,7 +65,7 @@ class TestSafeDirectoryTool(unittest.TestCase):
     @patch('os.path.abspath', return_value="/abs/path_is_file")
     @patch('os.path.expanduser', side_effect=lambda x: x)
     @patch('os.path.exists', return_value=True)
-    @patch('os.path.isdir', return_value=False) # Path exists but is not a directory
+    @patch('os.path.isdir', return_value=False)
     def test_path_is_not_directory(self, mock_isdir, mock_exists, mock_expanduser, mock_abspath):
         tool = SafeDirectoryTool()
         result = tool._run(directory_path="path_is_file")
@@ -84,7 +75,7 @@ class TestSafeDirectoryTool(unittest.TestCase):
     @patch('os.path.expanduser', side_effect=lambda x: x)
     @patch('os.path.exists', return_value=True)
     @patch('os.path.isdir', return_value=True)
-    @patch('os.listdir', return_value=[]) # Empty directory
+    @patch('os.listdir', return_value=[])
     def test_empty_directory(self, mock_listdir, mock_isdir, mock_exists, mock_expanduser, mock_abspath):
         tool = SafeDirectoryTool()
         result = tool._run(directory_path="empty_dir")

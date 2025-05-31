@@ -1,111 +1,224 @@
-# Optimized tasks.yaml
+# Updated tasks.yaml with comprehensive task definitions
 
-# General Research Tasks
-research_task:
-  description: >
-    Conduct thorough research on the topic: '{topic}'.
-    Identify key developments, current trends, significant factual information, and notable opinions or analyses.
-    Ensure information is relevant to the current year: {current_year}.
-  expected_output: >
-    A concise, well-organized list of 10-15 bullet points summarizing the most relevant and impactful
-    findings about {topic}. Each point should be distinct and informative, suitable for
-    initiating a detailed report or answering specific questions. Include sources where possible.
-  agent: researcher
-  async_execution: false # Set to true if you want this to run in parallel with other tasks if appropriate
-
-reporting_task:
-  description: >
-    Based on the provided research findings (context from `research_task` or other inputs) on '{topic}',
-    create a comprehensive and well-structured report.
-    Expand each key finding or data point into a detailed section, providing supporting information,
-    analysis, examples, and implications where appropriate.
-  expected_output: >
-    A fully fledged report in clean markdown format. The report should include:
-    1.  An Introduction/Executive Summary.
-    2.  Detailed sections for each major finding or aspect of the topic, with in-depth explanations and analysis.
-    3.  A Conclusion summarizing key takeaways or recommendations.
-    The output should be a single markdown text, without '```markdown' or '```' wrapping the entire content.
-  agent: reporting_analyst
-  async_execution: false
-
-# Claude Code Terminal Assistant Tasks
+# Core Terminal Assistant Tasks
 process_command_task:
   description: >
     Process the user's terminal input: "{user_command}".
-    Analyze the intent: Is it for file navigation, code execution, web research, general knowledge, or complex research?
-    Current working directory is: {cwd}.
-    User profile and preferences: {user_context}.
-    Based on the intent, formulate a precise plan. This might involve:
-    1.  Directly answering a simple query if possible.
-    2.  Delegating to FileNavigator for file system operations.
-    3.  Delegating to CodeExecutor for running code/commands.
-    4.  Delegating to WebResearcher for quick web lookups.
-    5.  Delegating to SeniorDataResearcher for in-depth research requests.
+    Current working directory: {cwd}
+    User context: {user_context}
+    
+    Analyze the intent and determine the appropriate action:
+    1. File operations -> delegate to FileNavigator
+    2. Code/command execution -> delegate to CodeExecutor  
+    3. Web research -> delegate to WebResearcher
+    4. System monitoring -> delegate to PerformanceMonitor
+    5. Environment management -> delegate to EnvironmentManager
+    6. Security analysis -> delegate to SecurityAnalyst
+    7. Git operations -> delegate to GitManager
+    8. Network diagnostics -> delegate to NetworkAnalyst
+    9. Complex research -> delegate to Researcher
+    
+    Provide clear delegation instructions with all necessary context.
   expected_output: >
-    A clear plan of action. This should be one of:
-    a) The direct answer to the user's query if handled immediately.
-    b) A precise delegation instruction for the appropriate specialist agent (FileNavigator, CodeExecutor, WebResearcher, or SeniorDataResearcher), including all necessary context for them to perform their task.
-    c) Confirmation of understanding and a request for clarification if the intent is ambiguous.
-    If a file system operation that changes the CWD is anticipated or completed by an agent, the new CWD must be noted and communicated back for state management.
+    Either a direct response for simple queries, or a clear delegation instruction
+    to the appropriate specialist agent with all required context and parameters.
+    Include current working directory updates if relevant.
   agent: terminal_commander
   async_execution: false
 
 navigate_files_task:
   description: >
-    Perform a file system operation based on the user's request: "{file_request}".
-    This may involve listing directory contents, reading a specific file, or changing the current working directory.
-    The current working directory for operational context is: {cwd}.
-    If the request involves writing to a file, creating a file/directory, or deleting a file/directory,
-    ensure that EXPLICIT user permission for THIS SPECIFIC action was clearly obtained in the '{file_request}'
-    or preceding context. If not, state that permission is required.
+    Perform file system operation: "{file_request}"
+    Current working directory: {cwd}
+    
+    Available operations:
+    - List directory contents
+    - Read file contents (including PDFs)
+    - Change working directory
+    - Create directories/files (with explicit permission)
+    - File information and structure analysis
+    
+    For write operations, ensure explicit user permission is confirmed.
   expected_output: >
-    A confirmation of the action taken (e.g., 'Successfully changed directory to /path/to/new_dir and updated CWD.',
-    'Contents of file_name.txt displayed.', 'Directory listing for /path/to/dir provided.').
-    If a file was read, include its content.
-    If a write/create/delete operation was requested but permission was not confirmed, state clearly:
-    "Action [specific action] not performed on [target] due to lack of explicit user permission."
-    If the CWD was changed, the output must include the new, absolute CWD.
+    Confirmation of action taken with results. Include file contents if read,
+    directory listings if requested, or new CWD if changed.
+    For permission-required operations without consent: 
+    "Action [operation] requires explicit user permission for [target]."
   agent: file_navigator
   async_execution: false
 
 execute_code_task:
   description: >
-    Securely execute the following code snippet or shell command: "{code_snippet}".
-    The execution context (current working directory) is: {cwd}.
-    Strictly validate the command against allowed patterns and safety protocols defined in the SafeShellTool
-    before execution. Do NOT execute if it violates safety rules (e.g., attempts blacklisted commands,
-    unauthorized file access, or network operations if restricted).
+    Execute code or command: "{code_snippet}"
+    Working directory: {cwd}
+    
+    Validate against SafeShellTool whitelist and safety protocols.
+    Provide execution output, errors, and performance metrics if requested.
   expected_output: >
-    The standard output (stdout) and standard error (stderr) from the executed command.
-    If the command was blocked for safety reasons, provide a clear, polite explanation of why it was blocked
-    (e.g., "Command '{command_name}' is not allowed for security reasons.").
-    If the command implies a persistent change in the environment that the user should be aware of
-    (e.g., a package installation via an allowed pip command), briefly note this.
+    Command output (stdout/stderr), execution status, and any relevant
+    environment changes. If blocked: clear explanation of safety violation.
+    Include execution time and performance data when available.
   agent: code_executor
   async_execution: false
 
 web_search_task:
   description: >
-    Conduct an internet search for: "{search_query}".
-    Prioritize fetching factual, up-to-date information from reliable sources.
-    If the query is a question, aim to find a direct answer.
-    If it's a general topic, provide a concise summary of key information.
+    Conduct web search: "{search_query}"
+    
+    Find accurate, current information from reliable sources.
+    For specific questions, provide direct answers.
+    For general topics, provide comprehensive summaries.
   expected_output: >
-    A concise answer to the search query, or a summary of the information found.
-    Directly extract and present key details and structured data if appropriate
-    (e.g., for a query like 'weather in Chicago', provide specific details such as temperature,
-    conditions, wind speed, humidity). Cite sources (URLs) if the information is directly quoted,
-    is a statistic, or from a specific, identifiable origin.
+    Concise, relevant information addressing the search query.
+    Include source citations for specific facts, statistics, or quotes.
+    Structure data appropriately (e.g., weather: temp, conditions, etc.).
   agent: web_researcher
   async_execution: false
 
-profile_task:
+system_monitor_task:
   description: >
-    Profile the execution time of a shell command.
-    Input: {command}. The ExecutionProfilerTool will execute this command
-    and measure its duration and success status.
+    Monitor system performance: "{monitor_request}"
+    
+    Available monitoring options:
+    - CPU usage and performance
+    - Memory utilization
+    - Disk usage and I/O
+    - Network activity
+    - Process information
+    - System health overview
   expected_output: >
-    A JSON object with fields: status ('success' or 'error'), duration_s (float), 
-    and result (output or error message from the command execution).
+    Detailed system metrics in JSON format with human-readable summaries.
+    Include performance insights and optimization recommendations when relevant.
+  agent: performance_monitor
+  async_execution: false
+
+profile_execution_task:
+  description: >
+    Profile command execution: "{command}"
+    
+    Execute the command while measuring performance metrics including
+    execution time, resource usage, and success status.
+  expected_output: >
+    JSON object with execution results: status, duration_s, resource_usage,
+    and command output or error details.
+  agent: performance_monitor
+  async_execution: false
+
+# Research and Analysis Tasks
+comprehensive_research_task:
+  description: >
+    Conduct thorough research on: "{topic}"
+    Current year context: {current_year}
+    
+    Research focus areas:
+    - Current developments and trends
+    - Key factual information
+    - Expert opinions and analyses
+    - Relevant statistics and data
+    - Recent news and updates
+  expected_output: >
+    Structured research findings with 10-15 key points covering the most
+    relevant and current information about the topic. Include source
+    attribution and credibility indicators.
+  agent: researcher
+  async_execution: false
+
+generate_report_task:
+  description: >
+    Create comprehensive report on: "{topic}"
+    Based on research findings: {research_context}
+    
+    Report structure:
+    1. Executive Summary
+    2. Detailed Analysis Sections
+    3. Key Findings and Insights
+    4. Conclusions and Recommendations
+  expected_output: >
+    Complete markdown report without code block wrapping.
+    Include introduction, detailed sections with analysis,
+    and actionable conclusions. Maintain professional formatting.
+  agent: reporting_analyst
+  async_execution: false
+
+# Specialized Tool Tasks
+manage_environment_task:
+  description: >
+    Environment management operation: "{env_operation}"
+    
+    Supported operations:
+    - Get environment variable value
+    - Set environment variable
+    - List all environment variables
+    - Unset environment variable
+    
+    Parameters: {env_params}
+  expected_output: >
+    Result of environment operation with confirmation of changes made.
+    For list operations: formatted environment variable dump.
+    For get operations: variable value or "not found" message.
+  agent: environment_manager
+  async_execution: false
+
+security_analysis_task:
+  description: >
+    Perform security analysis on: "{target_file}"
+    
+    Conduct static code analysis using security scanning tools.
+    Identify potential vulnerabilities, security issues, and
+    provide recommendations for improvement.
+  expected_output: >
+    Security analysis report in JSON format with identified issues,
+    severity levels, and recommended fixes. Include summary of
+    overall security posture.
+  agent: security_analyst
+  async_execution: false
+
+git_operation_task:
+  description: >
+    Git operation: "{git_action}"
+    Repository path: {repo_path}
+    Additional parameters: {git_params}
+    
+    Supported operations:
+    - status, clone, pull, push, commit
+    - branch management and checkout
+    - Repository information
+  expected_output: >
+    Git command result with status information.
+    For status: current branch and changes.
+    For operations: confirmation and any relevant output.
+    Include error handling for failed operations.
+  agent: git_manager
+  async_execution: false
+
+network_diagnostic_task:
+  description: >
+    Network diagnostic: "{diagnostic_type}"
+    Target host: {host}
+    Parameters: {net_params}
+    
+    Available diagnostics:
+    - ping (connectivity testing)
+    - traceroute (path analysis)
+    - nslookup (DNS resolution)
+  expected_output: >
+    Network diagnostic results with connectivity status,
+    response times, routing information, or DNS resolution details.
+    Include error analysis for failed connections.
+  agent: network_analyst
+  async_execution: false
+
+create_visualization_task:
+  description: >
+    Create data visualization: "{plot_request}"
+    Plot parameters: {plot_params}
+    
+    Supported plot types:
+    - Line plots for trends
+    - Bar charts for comparisons
+    - Custom formatting and labeling
+  expected_output: >
+    Confirmation of plot creation with filename and location.
+    Include plot description and any formatting details applied.
   agent: performance_monitor
   async_execution: false

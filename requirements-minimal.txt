@@ -1,0 +1,27 @@
+# Core dependencies with specific versions that work together
+
+# Pydantic first (most important)
+pydantic>=2.4.2,<2.10.0
+
+# Google AI components (pin compatible versions)
+google-generativeai==0.3.2
+google-ai-generativelanguage==0.4.0
+google-api-core>=2.15.0,<2.20.0
+
+# LangChain components (pin to working versions)
+langchain-core==0.1.52
+langchain-google-genai==0.0.9
+
+# CrewAI (after dependencies are resolved)
+crewai[tools]>=0.86.0,<0.90.0
+
+# Essential utilities
+python-dotenv>=1.0.0
+requests>=2.28.0
+beautifulsoup4>=4.12.0
+
+# Pin problematic dependencies
+protobuf>=5.26.1,<5.28.0
+jsonschema==4.22.0
+jinja2==3.1.2
+packaging==23.2

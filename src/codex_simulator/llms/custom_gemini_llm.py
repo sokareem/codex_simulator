@@ -1,120 +1,137 @@
+"""
+Custom Gemini LLM integration for CodexSimulator.
+Provides a simplified interface that avoids LangChain compatibility issues.
+"""
+
 import os
-from typing import Any, List, Mapping, Optional
+from typing import Any, Dict, List, Optional, Union
+from pathlib import Path
 
-import google.generativeai as genai_sdk # Renamed to avoid conflict
-from google.generativeai.types import GenerationConfig
-from langchain_core.callbacks.manager import CallbackManagerForLLMRun
-from langchain_core.language_models.llms import LLM
-from pydantic.v1 import Field, root_validator # Updated import for Pydantic v1 compatibility
+try:
+    import google.generativeai as genai
+    from google.generativeai.types import HarmCategory, HarmBlockThreshold
+    GENAI_AVAILABLE = True
+except ImportError:
+    GENAI_AVAILABLE = False
+    genai = None
 
-class CustomGeminiLLM(LLM):
+
+class CustomGeminiLLM:
     """
-    Custom LangChain LLM wrapper for Google Gemini API using the google-generativeai client.
-    It uses the `generate_content` method.
+    Custom Gemini LLM that works independently of LangChain compatibility issues.
+    Simplified implementation that focuses on core functionality.
     """
     
-    model: str # Renamed from model_name, no alias
-    temperature: float = 0.7
-    google_api_key: str # Made a standard required field
-
-    client: Any = Field(default=None, exclude=True) # Stores the genai.GenerativeModel instance
-
-    @root_validator() # Runs after individual field validation
-    def validate_environment_and_setup_client(cls, values: dict) -> dict:
-        """Validate that api key and python package exists in environment and setup client."""
-        api_key = values.get("google_api_key")
-        model_name = values.get("model")
-
-        if not api_key:
-            # This should ideally be caught by Pydantic if google_api_key is required and not provided.
-            # Adding an explicit check here for robustness.
-            raise ValueError(
-                "Google API Key not provided. It's a required field for CustomGeminiLLM."
-            )
+    def __init__(self, 
+                 model_name: str = "gemini-1.5-flash",
+                 api_key: Optional[str] = None,
+                 temperature: float = 0.7,
+                 max_tokens: Optional[int] = None):
         
-        if not model_name:
-            raise ValueError(
-                "Model name not provided. It's a required field for CustomGeminiLLM."
-            )
+        if not GENAI_AVAILABLE:
+            raise ImportError("google-generativeai is required but not installed")
         
-        try:
-            # google.generativeai was already imported as genai_sdk
-            pass
-        except ImportError: # Should not happen if import at top level succeeded
-            raise ImportError(
-                "Could not import google-generativeai python package. "
-                "Please install it with `pip install google-generativeai`."
-            )
+        # Get API key
+        self.api_key = api_key or os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+        if not self.api_key:
+            raise ValueError("GOOGLE_API_KEY or GEMINI_API_KEY environment variable must be set")
         
-        genai_sdk.configure(api_key=api_key)
-        values["client"] = genai_sdk.GenerativeModel(model_name=model_name)
-        return values
-
-    @property
-    def _llm_type(self) -> str:
-        return "custom_gemini_via_google_sdk"
-
-    def _call(
-        self,
-        prompt: str,
-        stop: Optional[List[str]] = None,
-        run_manager: Optional[CallbackManagerForLLMRun] = None,
-        **kwargs: Any,
-    ) -> str:
+        # Configure the client
+        genai.configure(api_key=self.api_key)
+        
+        self.model_name = model_name
+        self.temperature = temperature
+        self.max_tokens = max_tokens
+        
+        # Initialize the model
+        self.model = genai.GenerativeModel(model_name)
+        
+        # Generation config
+        self.generation_config = genai.types.GenerationConfig(
+            temperature=temperature,
+            max_output_tokens=max_tokens,
+        )
+        
+        # Safety settings - less restrictive for coding tasks
+        self.safety_settings = {
+            HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+            HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+            HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+            HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+        }
+    
+    def invoke(self, prompt: str) -> "AIMessage":
         """
-        Call out to Gemini's generate_content method.
+        Invoke the model with a prompt and return an AIMessage-like object.
         """
-        generation_config_params = {"temperature": self.temperature}
-        
-        if "temperature" in kwargs: # Allow overriding temperature
-            generation_config_params["temperature"] = kwargs.pop("temperature")
-        
-        # Handle stop sequences if provided and supported by the config
-        # The google-generativeai SDK's GenerationConfig takes 'stop_sequences'
-        if stop is not None:
-            generation_config_params["stop_sequences"] = stop
-            
-        generation_config = GenerationConfig(**generation_config_params)
-
         try:
-            response = self.client.generate_content(
-                contents=prompt,
-                generation_config=generation_config,
-                **kwargs 
+            response = self.model.generate_content(
+                prompt,
+                generation_config=self.generation_config,
+                safety_settings=self.safety_settings
             )
             
-            if response.text:
-                return response.text
-            elif response.parts:
-                full_text = "".join(part.text for part in response.parts if hasattr(part, 'text'))
-                if full_text:
-                    return full_text
-                if response.prompt_feedback and response.prompt_feedback.block_reason:
-                    return f"Error: Content generation blocked. Reason: {response.prompt_feedback.block_reason_message or response.prompt_feedback.block_reason}"
+            # Return a simple response object
+            return AIMessage(content=response.text)
             
-            if response.candidates:
-                candidate_text_parts = []
-                for candidate in response.candidates:
-                    if candidate.content and candidate.content.parts:
-                        for part_in_candidate in candidate.content.parts: # Renamed inner loop variable
-                            if hasattr(part_in_candidate, 'text'):
-                                candidate_text_parts.append(part_in_candidate.text)
-                if candidate_text_parts:
-                    return "".join(candidate_text_parts)
-
-            return "Error: Empty response from Gemini API or content blocked."
-
         except Exception as e:
-            return f"Error generating content with Gemini: {e}"
+            return AIMessage(content=f"Error generating response: {str(e)}")
+    
+    def generate(self, messages: List[Dict[str, str]]) -> "AIMessage":
+        """
+        Generate response from a list of messages (for chat-like interface).
+        """
+        # Convert messages to a single prompt
+        prompt_parts = []
+        for message in messages:
+            role = message.get("role", "user")
+            content = message.get("content", "")
+            
+            if role == "system":
+                prompt_parts.append(f"System: {content}")
+            elif role == "user":
+                prompt_parts.append(f"User: {content}")
+            elif role == "assistant":
+                prompt_parts.append(f"Assistant: {content}")
+        
+        prompt = "\n".join(prompt_parts)
+        return self.invoke(prompt)
+    
+    def stream(self, prompt: str):
+        """
+        Stream the response (simplified implementation).
+        """
+        try:
+            response = self.model.generate_content(
+                prompt,
+                generation_config=self.generation_config,
+                safety_settings=self.safety_settings,
+                stream=True
+            )
+            
+            for chunk in response:
+                if chunk.text:
+                    yield AIMessage(content=chunk.text)
+                    
+        except Exception as e:
+            yield AIMessage(content=f"Error in streaming: {str(e)}")
 
 
-    @property
-    def _identifying_params(self) -> Mapping[str, Any]:
-        """Get the identifying parameters."""
-        return {"model": self.model, "temperature": self.temperature}
+class AIMessage:
+    """Simple AIMessage-like class to avoid LangChain dependencies."""
+    
+    def __init__(self, content: str):
+        self.content = content
+        
+    def __str__(self):
+        return self.content
+    
+    def __repr__(self):
+        return f"AIMessage(content='{self.content[:50]}...')"
 
-    @property
-    def supports_stop_words(self) -> bool:
-        """Whether this LLM supports stop words."""
-        return True # Gemini API supports stop sequences
+
+# For backwards compatibility
+class CustomGeminiChatModel(CustomGeminiLLM):
+    """Alias for CustomGeminiLLM for backwards compatibility."""
+    pass
 

@@ -92,16 +92,21 @@ def install_dependencies_312():
     # Install compatible dependencies for Python 3.12
     dependencies = [
         "pydantic>=2.4.2,<3.0.0",
-        "crewai[tools]>=0.86.0,<1.0.0",
-        "langchain-google-genai>=0.0.1",
-        "google-generativeai>=0.3.0",
+        "crewai[tools]>=0.86.0,<1.0.0",  # More conservative version for Python 3.12
+        "langchain-core>=0.1.0,<0.3.0",
+        "langchain-google-genai>=0.0.1,<2.0.0",
+        "google-generativeai>=0.3.0,<1.0.0",
         "python-dotenv>=1.0.0",
         "requests>=2.28.0",
         "beautifulsoup4>=4.12.0",
-        "langchain-core>=0.1.0",
         "typing-extensions>=4.6.1",
         "annotated-types>=0.6.0",
-        "pypdf>=4.0.0"  # Added pypdf
+        "pypdf>=4.0.0",
+        "langchain-text-splitters>=0.0.1",
+        "matplotlib>=3.5.0",
+        "psutil>=5.9.0",
+        "GitPython>=3.1.0",
+        "bandit>=1.7.0"
     ]
     
     for dep in dependencies:
@@ -155,7 +160,11 @@ test_imports = [
     "google.generativeai",
     "dotenv",
     "requests",
-    "bs4"
+    "bs4",
+    "matplotlib", # Added
+    "psutil",     # Added
+    "git",        # Added (GitPython imports as 'git')
+    "bandit"      # Added
 ]
 
 failed = []

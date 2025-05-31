@@ -1,105 +1,136 @@
 import os
-from typing import Type, List
+from typing import Optional, List, Type
 from pydantic import BaseModel, Field
 from crewai.tools import BaseTool
 
 class SafeDirectoryToolInput(BaseModel):
-    """Input for the SafeDirectoryTool."""
-    directory_path: str = Field(..., description="The path of the directory to read.")
+    """Input schema for SafeDirectoryTool."""
+    directory_path: str = Field(description="The path to the directory whose contents need to be listed.")
 
 class SafeDirectoryTool(BaseTool):
-    """A tool to read directory contents with minimal restrictions."""
-    name: str = "safe_directory_tool"
-    description: str = "Lists files and subdirectories within a specified directory."
+    """Tool for safely listing directory contents."""
+    name: str = "Safe Directory Lister"
+    description: str = "Safely lists the contents of a specified directory. Restricted to allowed paths for security."
     args_schema: Type[BaseModel] = SafeDirectoryToolInput
     
-    # Only block key system directories that could be problematic
-    blocked_directories: List[str] = [
-        "/etc/ssl", "/etc/ssh", "/root/.ssh", "/proc/kcore", 
-        "/dev/mem", "/dev/kmem", "/dev/port"
-    ]
+    # Define as Pydantic fields to avoid validation errors
+    allowed_paths: List[str] = Field(default_factory=list, exclude=True)
+    blocked_directories: List[str] = Field(default_factory=list, exclude=True)
 
-    def _is_safe_path(self, path: str) -> dict:
-        """Check if a path is safe to access."""
-        # Convert to absolute path
-        abs_path = os.path.abspath(os.path.expanduser(path))
+    def __init__(self, allowed_paths: Optional[List[str]] = None, blocked_directories: Optional[List[str]] = None, **kwargs):
+        # Set up blocked directories first
+        blocked_dirs = blocked_directories or [
+            "/etc", "/var", "/bin", "/sbin", "/usr/bin", "/usr/sbin", 
+            "/lib", "/root", "/boot", "/dev", "/proc", "/sys"
+        ]
+        blocked_dirs = [os.path.abspath(os.path.expanduser(p)) for p in blocked_dirs]
+        
+        # Set up allowed paths
+        if allowed_paths is None:
+            try:
+                allowed_dirs = [os.getcwd()]
+            except FileNotFoundError:
+                # Fallback if CWD was deleted
+                allowed_dirs = ["/"]
+        else:
+            allowed_dirs = [os.path.abspath(os.path.expanduser(p)) for p in allowed_paths]
+        
+        # Pass to parent constructor with fields properly set
+        super().__init__(
+            allowed_paths=allowed_dirs,
+            blocked_directories=blocked_dirs,
+            **kwargs
+        )
+        
+        # Update description with current allowed paths
+        self.description = f"Safely lists directory contents. Allowed base paths: {self.allowed_paths}"
+
+    class Config:
+        arbitrary_types_allowed = True
+        
+    def _is_safe_path(self, directory_path: str) -> bool:
+        """Check if the directory path is safe to access."""
+        abs_path = os.path.abspath(os.path.expanduser(directory_path))
         
         # Check against blocked directories
         for blocked in self.blocked_directories:
-            blocked_abs = os.path.abspath(os.path.expanduser(blocked))
-            if abs_path.startswith(blocked_abs):
-                return {"safe": False, "reason": f"Access to '{blocked}' is restricted for security reasons"}
+            if abs_path.startswith(blocked):
+                return False
         
-        # Check if directory exists
-        if not os.path.exists(abs_path):
-            return {"safe": False, "reason": f"Directory '{abs_path}' does not exist"}
-            
-        # Check if it's actually a directory
-        if not os.path.isdir(abs_path):
-            return {"safe": False, "reason": f"Path '{abs_path}' is not a directory"}
-                
-        return {"safe": True, "reason": ""}
+        # Check against allowed paths
+        return any(abs_path.startswith(allowed) for allowed in self.allowed_paths)
 
     def _run(self, directory_path: str) -> str:
-        """List the contents of a directory if it passes safety checks."""
-        safety_check = self._is_safe_path(directory_path)
-        if not safety_check["safe"]:
-            return f"Error: {safety_check['reason']}"
+        """The method that CrewAI will call to run the tool."""
+        abs_target_path = os.path.abspath(os.path.expanduser(directory_path))
+
+        # Check if path is safe
+        if not self._is_safe_path(directory_path):
+            # Check which specific restriction was violated
+            for blocked in self.blocked_directories:
+                if abs_target_path.startswith(blocked):
+                    return f"Error: Access to '{blocked}' is restricted for security reasons. Path requested: {abs_target_path}"
+            
+            return f"Error: Access to path '{abs_target_path}' is not allowed. Allowed base paths: {self.allowed_paths}"
+        
+        # Check if directory exists
+        if not os.path.exists(abs_target_path):
+            return f"Error: Directory '{abs_target_path}' does not exist."
+        
+        # Check if it's actually a directory
+        if not os.path.isdir(abs_target_path):
+            return f"Error: Path '{abs_target_path}' is not a directory."
         
         try:
-            abs_path = os.path.abspath(os.path.expanduser(directory_path))
-            items = os.listdir(abs_path)
+            contents = os.listdir(abs_target_path)
+            if not contents:
+                return f"Contents of directory '{directory_path}':\nDirectory is empty."
+
+            result = f"Contents of directory '{directory_path}':\nDirectories:\n"
+            files_str = "Files:\n"
             
-            # Categorize items as files or directories
-            files = []
-            directories = []
-            
-            for item in items:
+            dirs_found = False
+            files_found = False
+
+            for item in sorted(contents):
+                full_item_path = os.path.join(abs_target_path, item)
                 try:
-                    full_path = os.path.join(abs_path, item)
-                    if os.path.isdir(full_path):
-                        directories.append(f"📁 {item}/")
-                    else:
-                        # Get file size
+                    if os.path.isdir(full_item_path):
+                        result += f"  📁 {item}/\n"
+                        dirs_found = True
+                    elif os.path.isfile(full_item_path):
                         try:
-                            size = os.path.getsize(full_path)
-                            size_str = self._format_file_size(size)
-                            files.append(f"📄 {item} ({size_str})")
-                        except:
-                            files.append(f"📄 {item}")
-                except:
-                    # In case of permission issues with specific files
-                    files.append(f"❓ {item} (unable to access)")
+                            size = os.path.getsize(full_item_path)
+                            size_kb = size / 1024
+                            if size_kb < 1:
+                                size_str = f"{size}B"
+                            else:
+                                size_str = f"{size_kb:.1f}KB"
+                            files_str += f"  📄 {item} ({size_str})\n"
+                        except OSError:
+                            files_str += f"  📄 {item} (size unavailable)\n"
+                        files_found = True
+                    else:
+                        # Symlinks or other special file types
+                        files_str += f"  ❓ {item} (special file type)\n"
+                        files_found = True
+                except OSError:
+                    # Permission errors for individual items
+                    result += f"  🚫 {item} (inaccessible)\n"
+
+            if not dirs_found:
+                result = result.replace("Directories:\n", "Directories: None\n")
+            if not files_found:
+                files_str = files_str.replace("Files:\n", "Files: None\n")
             
-            # Sort and create output
-            directories.sort()
-            files.sort()
-            
-            result = f"Contents of directory '{directory_path}':\n\n"
-            
-            if directories:
-                result += "Directories:\n" + "\n".join(directories) + "\n\n"
-            
-            if files:
-                result += "Files:\n" + "\n".join(files)
-            
-            if not items:
-                result += "Directory is empty."
-            
-            return result
+            return result + files_str
             
         except PermissionError:
-            return f"Error: Permission denied to access directory '{directory_path}'."
+            return f"Error: Permission denied to access directory '{abs_target_path}'."
         except Exception as e:
-            return f"Error accessing directory: {str(e)}"
+            return f"Error listing directory '{abs_target_path}': {str(e)}"
 
-    def _format_file_size(self, size_bytes: int) -> str:
-        """Format file size for display."""
-        if size_bytes < 1024:
-            return f"{size_bytes} B"
-        elif size_bytes < 1024 * 1024:
-            return f"{size_bytes/1024:.1f} KB"
-        elif size_bytes < 1024 * 1024 * 1024:
-            return f"{size_bytes/1024/1024:.1f} MB"
-        else:
-            return f"{size_bytes/1024/1024/1024:.1f} GB"
+    # Keep the legacy method for backward compatibility
+    def list_directory(self, directory_path: str) -> str:
+        """Legacy method for backward compatibility."""
+        return self._run(directory_path)
