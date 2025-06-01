@@ -6,9 +6,25 @@ import argparse
 import traceback
 from datetime import datetime
 
-from .crew import CodexSimulator
-# Keep the import but we won't use it actively
-from .utils.delegation_fix import apply_delegation_fix
+# Fix import issue for direct execution
+if __name__ == "__main__" and __package__ is None:
+    # Get the absolute path of the current file (main.py)
+    current_file_path = os.path.abspath(__file__)
+    # Navigate up to the project root (codex_simulator/)
+    # main.py is in src/codex_simulator/main.py
+    # current_file_path -> .../codex_simulator/src/codex_simulator/main.py
+    # os.path.dirname(current_file_path) -> .../codex_simulator/src/codex_simulator
+    # os.path.dirname(os.path.dirname(current_file_path)) -> .../codex_simulator/src
+    # os.path.dirname(os.path.dirname(os.path.dirname(current_file_path))) -> .../codex_simulator (project root)
+    project_root_dir = os.path.dirname(os.path.dirname(os.path.dirname(current_file_path)))
+    sys.path.insert(0, project_root_dir)
+    
+    # Now use absolute imports from the project root
+    from src.codex_simulator.crew import CodexSimulator
+    from src.codex_simulator.utils.delegation_fix import apply_delegation_fix
+else:
+    from .crew import CodexSimulator
+    from .utils.delegation_fix import apply_delegation_fix
 
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
 
@@ -20,6 +36,22 @@ from crewai.flow.flow import listen, or_
 
 # Add MCP imports
 from .mcp import MCPClient, MCPConnectionConfig, create_mcp_client
+
+# Try to import enhanced UI components with graceful fallback
+try:
+    from .utils.terminal_ui import terminal_ui
+    TERMINAL_UI_AVAILABLE = True
+except ImportError as e:
+    TERMINAL_UI_AVAILABLE = False
+    print(f"⚠️  Enhanced terminal UI not available: {e}")
+    print("💡 Run 'python install_enhanced_deps.py' to enable enhanced features")
+
+try:
+    from .utils.performance_monitor import performance_monitor
+    PERFORMANCE_MONITOR_AVAILABLE = True
+except ImportError as e:
+    PERFORMANCE_MONITOR_AVAILABLE = False
+    print(f"⚠️  Performance monitoring not available: {e}")
 
 def run():
     """
@@ -103,93 +135,146 @@ def run_terminal_assistant(show_warning=True):
     except Exception as e:
         print(f"An error occurred: {e}")
 
-async def run_terminal_assistant_with_flows_async():
-    """Async version of the terminal assistant with MCP integration support"""
-    # Check for MCP configuration
-    use_mcp = os.getenv('USE_MCP', 'false').lower() == 'true'
-    mcp_server_url = os.getenv('MCP_SERVER_URL', 'http://localhost:8000')
-    
-    print("🚀 Starting CodexSimulator with Flow orchestration...")
-    if use_mcp:
-        print(f"🔗 MCP integration enabled - Server: {mcp_server_url}")
-    
-    # Check Python version
-    python_version = sys.version_info
-    if python_version.major == 3 and python_version.minor >= 12:
-        print("🔍 Checking Python 3.12 environment...")
-        print("✅ Running in Python 3.12 environment")
-    
-    # Initialize with MCP support
-    assistant = CodexSimulator(
-        use_mcp=use_mcp,
-        mcp_server_url=mcp_server_url
-    )
-    
-    # Wait for MCP initialization if enabled
-    # The following sleep is removed as MCP initialization should be handled
-    # by the CodexSimulator instance itself, typically within its async methods.
-    # if use_mcp:
-    #     await asyncio.sleep(1.0)  # Give MCP time to initialize
-    
-    try:
-        print("💻 Enter command (or 'quit' to exit):")
-        
-        while True:
-            try:
-                # Get user input
-                command = input("> ").strip()
-                
-                if command.lower() in ['quit', 'exit']:
-                    print("👋 Goodbye!")
-                    break
-                
-                if not command:
-                    continue
-                
-                # Process command
-                result = await assistant.terminal_assistant(command)
-                print(result)
-                
-            except KeyboardInterrupt:
-                print("\n👋 Goodbye!")
-                break
-            except Exception as e:
-                print(f"❌ Error: {e}")
-                
-    finally:
-        # Cleanup MCP connection
-        await assistant.cleanup_mcp()
-
 def run_terminal_assistant_with_flows():
-    """Synchronous wrapper for async terminal assistant"""
+    """Synchronous wrapper for terminal assistant - fallback to sync mode immediately."""
     try:
-        asyncio.run(run_terminal_assistant_with_flows_async())
+        # Skip async entirely and go straight to sync mode
+        print("🚀 Starting CodexSimulator (Synchronous Mode)...")
+        run_terminal_assistant_simple()
     except KeyboardInterrupt:
         print("\n👋 Goodbye!")
     except Exception as e:
         print(f"❌ Startup error: {e}")
+        print("🔄 Trying basic fallback...")
+        run_terminal_assistant_basic_fallback()
 
-def run_hybrid_mode():
-    """Run with intelligent crew/flow selection"""
-    simulator = CodexSimulator()
+def run_terminal_assistant_simple():
+    """Simple synchronous terminal assistant."""
+    print("🚀 Starting CodexSimulator (Simple Mode)...")
     
-    while True:
-        command = input("\n💻 Enter command: ").strip()
-        if command.lower() in ['quit', 'exit']:
-            break
+    try:
+        assistant = CodexSimulator()
         
-        # Intelligent selection based on command complexity
-        complexity_score = simulator._assess_command_complexity(command)
-        
-        if complexity_score >= 7:
-            print("🔄 Using Flow orchestration for complex command...")
-            simulator.flow_enabled = True
+        # Try enhanced UI with fallback
+        ui_available = TERMINAL_UI_AVAILABLE
+        if ui_available:
+            terminal_ui.clear_screen()
+            terminal_ui.print_welcome()
         else:
-            print("⚡ Using direct Crew execution for simple command...")
-            simulator.flow_enabled = False
+            print("\n" + "=" * 60)
+            print("CodeX Simulator Terminal Assistant")
+            print("Simple Mode - Basic terminal interaction") 
+            print("=" * 60)
+            print()
         
-        result = simulator.terminal_assistant(command)
-        print(f"\n✅ {result}")
+        print("💻 Enter command (or 'quit' to exit):")
+        
+        while True:
+            try:
+                if ui_available:
+                    user_input = terminal_ui.get_user_input("❯ ")
+                else:
+                    user_input = input("❯ ")
+                
+                if not user_input.strip():
+                    continue
+                    
+                if user_input.lower() in ['exit', 'quit', 'bye']:
+                    if ui_available:
+                        terminal_ui.print_system_message("Goodbye! 👋", "info")
+                    else:
+                        print("👋 Goodbye!")
+                    break
+                    
+                if user_input.lower() == 'clear':
+                    if ui_available:
+                        terminal_ui.clear_screen()
+                    else:
+                        os.system('clear' if os.name == 'posix' else 'cls')
+                    continue
+                
+                print("⏳ Processing...")
+                
+                # Use the synchronous method
+                response = assistant.terminal_assistant_sync(user_input)
+                
+                if ui_available:
+                    terminal_ui.print_ai_response(response)
+                else:
+                    print(f"\n🤖 AI Response:\n{response}\n")
+                
+            except KeyboardInterrupt:
+                print("\n⚠️  Use 'exit' to quit gracefully")
+                continue
+            except Exception as e:
+                error_msg = f"❌ Error: {str(e)}"
+                if ui_available:
+                    terminal_ui.print_system_message(error_msg, "error")
+                else:
+                    print(error_msg)
+                continue
+                
+    except Exception as e:
+        print(f"❌ Fatal error: {e}")
+        print("🔄 Trying basic fallback...")
+        run_terminal_assistant_basic_fallback()
+
+def run_terminal_assistant_basic_fallback():
+    """Most basic fallback terminal assistant."""
+    print("🚀 Starting CodexSimulator (Basic Fallback Mode)...")
+    print("This is a minimal mode with basic functionality.")
+    print()
+    
+    try:
+        while True:
+            try:
+                user_input = input("Basic❯ ")
+                
+                if not user_input.strip():
+                    continue
+                    
+                if user_input.lower() in ['exit', 'quit', 'bye']:
+                    print("👋 Goodbye!")
+                    break
+                    
+                if user_input.lower() == 'clear':
+                    os.system('clear' if os.name == 'posix' else 'cls')
+                    continue
+                
+                if user_input.lower() in ['help', 'commands']:
+                    print("""
+Basic Commands Available:
+• ls - list files
+• pwd - current directory
+• cat <file> - show file contents
+• help - show this help
+• exit/quit - exit the assistant
+                    """)
+                    continue
+                
+                # Handle very basic commands directly
+                if user_input.strip() == 'ls':
+                    try:
+                        files = os.listdir(os.getcwd())
+                        for f in files:
+                            print(f"📁 {f}" if os.path.isdir(f) else f"📄 {f}")
+                    except Exception as e:
+                        print(f"Error: {e}")
+                elif user_input.strip() == 'pwd':
+                    print(f"Current directory: {os.getcwd()}")
+                else:
+                    print("🤖 This is basic fallback mode. Only simple commands (ls, pwd, help) are available.")
+                    print("For full functionality, please fix the installation issues.")
+                
+            except KeyboardInterrupt:
+                print("\n⚠️  Use 'exit' to quit gracefully")
+                continue
+            except Exception as e:
+                print(f"❌ Error: {str(e)}")
+                continue
+                
+    except Exception as e:
+        print(f"❌ Fatal error in fallback: {e}")
 
 def train():
     """

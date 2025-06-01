@@ -42,6 +42,7 @@ from codex_simulator.utils.simple_knowledge import SimpleKnowledge  # Add this i
 from codex_simulator.tools.fs_cache_tool import FSCacheTool    # new import
 from codex_simulator.tools.execution_profiler_tool import ExecutionProfilerTool  # new import
 from codex_simulator.tools.delegate_tool import DelegateTool  # Import our new delegate tool
+from codex_simulator.tools.delegate_tool import MCPDelegateTool  # Add this import
 from codex_simulator.tools.pdf_reader_tool import PDFReaderTool # Import PDFReaderTool
 
 # Add MCP imports
@@ -898,20 +899,14 @@ You can also use natural language queries like:
     @task
     def analyze_pdf_task(self) -> Task:
         """Task for analyzing PDF documents."""
-        return Task(
-            config=self.tasks_config.get('analyze_pdf_task', { # Provide default config
-                'description': (
-                    "Analyze the PDF document located at '{pdf_path}'. "
-                    "Extract key information, summarize its content, or answer specific questions based on the user's request. "
-                    "If the PDF is large, consider breaking it down first. "
-                    "User's specific request for this PDF: {user_query_about_pdf}"
-                ),
-                'expected_output': (
-                    "A comprehensive analysis of the PDF document, addressing the user's specific query. "
-                    "This could be a summary, extracted key points, answers to questions, or chunked content if requested."
-                )
-            })
-        )
+        task_config_key = 'analyze_pdf_task'
+        # Get config from YAML. It's expected to be there and define the agent by name.
+        task_config = self.tasks_config[task_config_key] 
+        
+        # CrewBase's @task decorator will resolve the agent name in task_config
+        # to an actual agent instance from self.agents.
+        # So, we just need to return a Task with this config.
+        return Task(config=task_config)
 
     @crew
     def crew(self) -> Crew:
@@ -1169,7 +1164,7 @@ You can also use natural language queries like:
 
     def _handle_cd_command(self, command: str) -> str:
         """Handle directory changes explicitly"""
-        directory = command.strip()[3:].strip()
+        directory = command.strip()[3:].trip()
         new_dir = os.path.abspath(os.path.join(self.cwd, directory))
         if os.path.isdir(new_dir):
             self.cwd = new_dir
@@ -1344,3 +1339,177 @@ You can also use natural language queries like:
             process=Process.sequential,
             verbose=True
         )
+
+    def terminal_assistant_sync(self, command: str) -> str:
+        """Synchronous version of terminal assistant to avoid asyncio conflicts."""
+        try:
+            # For now, use the existing crew-based approach without flows
+            # This avoids the asyncio conflicts while we stabilize the system
+            
+            # Basic input validation
+            if not command or not command.strip():
+                return "Please provide a command or question."
+            
+            command = command.strip()
+            command_lower = command.lower() # For case-insensitive checks
+            
+            # Handle help requests
+            if command_lower in ['help', 'commands', 'what can you do']:
+                return self._get_help_message()
+
+            # Handle 'cd' command explicitly
+            if command_lower.startswith("cd "):
+                return self._handle_cd_command(command)
+
+            # Handle simple file operations
+            if any(cmd_keyword in command_lower for cmd_keyword in ['ls', 'list', 'directory', 'files']):
+                # Avoid overly broad matches, e.g. "list my favorite pdf files"
+                # This simple check might need refinement for more complex natural language.
+                # For now, if it's not a direct shell command, let the crew handle it.
+                if self._is_simple_shell_command(command) or command_lower == "ls": # specifically allow 'ls'
+                     return self._handle_file_listing(command)
+            
+            # Handle direct shell commands
+            if self._is_simple_shell_command(command):
+                return self._execute_simple_command(command)
+            
+            # Handle other commands through the crew system
+            return self._run_with_crew_sync(command)
+            
+        except Exception as e:
+            return f"Error processing command: {str(e)}"
+    
+    def _get_help_message(self) -> str:
+        """Get help message for available commands."""
+        return """
+CodexSimulator Terminal Assistant
+
+Available capabilities:
+• File operations: ls, cat, find files
+• Code execution: run Python scripts, analyze code
+• Web research: search information, get weather
+• System commands: basic shell operations
+• General assistance: ask questions, get explanations
+
+Example commands:
+• "list files in current directory"
+• "run this Python script"
+• "search for information about AI"
+• "what's the weather like?"
+• "explain how this code works"
+
+Type 'exit' or 'quit' to exit.
+        """
+    
+    def _handle_file_listing(self, command: str) -> str:
+        """Handle file listing operations."""
+        try:
+            import os
+            current_dir = os.getcwd()
+            files = []
+            
+            for item in os.listdir(current_dir):
+                if os.path.isfile(item):
+                    files.append(f"📄 {item}")
+                elif os.path.isdir(item):
+                    files.append(f"📁 {item}")
+            
+            if files:
+                return f"Contents of {current_dir}:\n" + "\n".join(files)
+            else:
+                return f"Directory {current_dir} is empty."
+                
+        except Exception as e:
+            return f"Error listing files: {str(e)}"
+    
+    def _is_simple_shell_command(self, command: str) -> bool:
+        """Check if this is a simple shell command that can be executed directly."""
+        simple_commands = ['ls', 'pwd', 'cat', 'echo', 'date', 'whoami', 'which']
+        cmd_parts = command.strip().split()
+        return len(cmd_parts) > 0 and cmd_parts[0] in simple_commands
+    
+    def _execute_simple_command(self, command: str) -> str:
+        """Execute simple commands directly without full crew overhead."""
+        try:
+            import subprocess
+            
+            # Basic safety check
+            if any(dangerous in command.lower() for dangerous in ['rm ', 'del ', 'format ', 'sudo ']):
+                return "Command blocked for safety. Use the crew system for complex operations."
+            
+            result = subprocess.run(
+                command,
+                shell=True,
+                capture_output=True,
+                text=True,
+                timeout=10,
+                cwd=self.cwd
+            )
+            
+            if result.returncode == 0:
+                return result.stdout.strip() if result.stdout.strip() else "Command executed successfully (no output)"
+            else:
+                return f"Command failed with exit code {result.returncode}: {result.stderr.strip()}"
+                
+        except subprocess.TimeoutExpired:
+            return "Command timed out"
+        except Exception as e:
+            return f"Error executing command: {str(e)}"
+    
+    def _run_with_crew_sync(self, command: str) -> str:
+        """Run command through crew system synchronously."""
+        try:
+            # Ensure CLAUDE.md exists for shared state
+            self._ensure_claude_md_exists()
+            user_context = self._load_user_context()
+            claude_context = self._load_claude_context()
+
+            # Use the specific terminal crew setup
+            terminal_crew = self._create_terminal_crew(command, user_context, claude_context)
+
+            # Prepare inputs for the terminal_commander's task and potential delegated tasks.
+            # The main task description in _create_terminal_crew already embeds command, cwd, etc.
+            # These inputs are available if template variables are used or for context.
+            inputs = {
+                'user_command': command,
+                'cwd': self.cwd,
+                'user_context': user_context,
+                'claude_context': claude_context,
+                # Add other common variables, ensuring defaults if not always applicable
+                'current_year': str(datetime.now().year),
+                'topic': command, # Default topic to the command itself
+                'file_request': 'N/A',
+                'code_snippet': 'N/A',
+                'search_query': command, # Default search query
+                'pdf_path': 'N/A', # Default for analyze_pdf_task if delegated
+                'user_query_about_pdf': 'N/A' # Default for analyze_pdf_task if delegated
+            }
+            
+            result = terminal_crew.kickoff(inputs=inputs)
+            
+            # Extract the result properly
+            raw_output = ""
+            if hasattr(result, 'raw_output') and result.raw_output is not None: # CrewAI >= 0.28.8
+                raw_output = str(result.raw_output)
+            elif hasattr(result, 'raw') and result.raw is not None: # Older CrewAI
+                raw_output = str(result.raw)
+            elif hasattr(result, 'result') and result.result is not None:
+                raw_output = str(result.result)
+            elif result is not None:
+                raw_output = str(result)
+            
+            # Update CWD if changed by the command execution
+            new_cwd = self._state.extract_cwd_from_response(raw_output)
+            if new_cwd:
+                self.cwd = new_cwd # This uses the setter which updates state_tracker
+
+            # Update shared memory (CLAUDE.md)
+            self._update_claude_md(command, raw_output)
+            
+            return raw_output
+                
+        except Exception as e:
+            error_msg = f"Error executing command via crew: {str(e)}"
+            # Optionally log to CLAUDE.md
+            self._update_claude_md(command, f"CREW_EXECUTION_ERROR: {error_msg}")
+            return error_msg

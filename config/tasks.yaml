@@ -1,0 +1,66 @@
+research_task:
+  description: >
+    Conduct thorough research on the topic: '{topic}'.
+    Identify key developments, current trends, significant factual information,
+    and notable opinions or analyses.
+    Ensure information is relevant to the current year: {current_year}.
+  expected_output: >
+    A concise, well-organized list of 10-15 bullet points summarizing the most relevant findings
+
+reporting_task:
+  description: >
+    Based on the research findings about '{topic}',
+    create a comprehensive and well-structured report.
+    Expand each key finding into a detailed section, providing supporting information,
+    analysis, and examples where appropriate.
+  expected_output: >
+    A fully fledged report in clean markdown format
+
+process_command_task:
+  description: >
+    Process the user's terminal command or query: '{user_command}'
+    Current working directory: {cwd}
+    User context: {user_context}
+    Command history context: {claude_context}
+    
+    Analyze the command and coordinate with specialist agents as needed.
+    Provide clear, helpful responses and execute the requested operations safely.
+  expected_output: >
+    A clear response addressing the user's command with appropriate action taken
+
+navigate_files_task:
+  description: >
+    Handle file system navigation and operations for: '{file_request}'
+    Current working directory: {cwd}
+    
+    Perform the requested file operations safely and provide clear feedback.
+  expected_output: >
+    Clear information about the file operation results
+
+execute_code_task:
+  description: >
+    Execute the following code or command safely: '{code_snippet}'
+    Current working directory: {cwd}
+    
+    Run the code in a secure environment and provide execution results.
+  expected_output: >
+    Execution results with any output, errors, or status information
+
+web_search_task:
+  description: >
+    Research the following query using web sources: '{search_query}'
+    
+    Find accurate, current information and provide a comprehensive summary.
+  expected_output: >
+    A well-researched summary with key findings and relevant information
+
+analyze_pdf_task:
+  description: >
+    Analyze the PDF document located at '{pdf_path}'.
+    Extract key information, summarize its content, or answer specific questions
+    based on the user's request: '{user_query_about_pdf}'
+    
+    If the PDF is large, consider breaking it down into manageable chunks.
+  expected_output: >
+    A comprehensive analysis addressing the user's specific query about the PDF
+  agent: pdf_document_analyst
