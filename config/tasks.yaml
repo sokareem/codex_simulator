@@ -64,3 +64,17 @@ analyze_pdf_task:
   expected_output: >
     A comprehensive analysis addressing the user's specific query about the PDF
   agent: pdf_document_analyst
+
+translate_text_task:
+  description: >
+    Translate the given text: '{text_to_translate}'
+    From: {source_language}
+    To: {target_language}
+    
+    Additional context: {translation_context}
+    
+    Provide an accurate translation with cultural sensitivity and linguistic appropriateness.
+    Include explanations of cultural nuances when relevant.
+  expected_output: >
+    An accurate translation with cultural context and linguistic notes when appropriate
+  agent: multilingual_translator

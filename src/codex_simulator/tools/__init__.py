@@ -8,3 +8,5 @@ from codex_simulator.tools.website_tool import WebsiteTool
 from codex_simulator.tools.fs_cache_tool import FSCacheTool
 from codex_simulator.tools.execution_profiler_tool import ExecutionProfilerTool, ExecutionProfilerToolInput
 from codex_simulator.tools.delegate_tool import DelegateTool, DelegateToolInput
+from codex_simulator.tools.pdf_reader_tool import PDFReaderTool
+from codex_simulator.tools.translation_tool import TranslationTool

@@ -320,6 +320,7 @@ def run_mcp_server_standalone():
         SafeShellTool, SerpAPITool, WebsiteTool
     )
     from .tools.pdf_reader_tool import PDFReaderTool # Added import
+    from .tools.translation_tool import TranslationTool # Added import
     
     print("🚀 Starting standalone MCP server...")
     
@@ -331,7 +332,8 @@ def run_mcp_server_standalone():
         "safe_shell_tool": SafeShellTool()._run,
         "serp_api_tool": SerpAPITool()._run,
         "website_tool": WebsiteTool()._run,
-        "pdf_reader_tool": PDFReaderTool()._run # Added PDFReaderTool
+        "pdf_reader_tool": PDFReaderTool()._run, # Added PDFReaderTool
+        "translation_tool": TranslationTool()._run # Added TranslationTool
     }
     
     # Run server with registered tools

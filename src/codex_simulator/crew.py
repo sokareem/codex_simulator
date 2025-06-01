@@ -44,6 +44,7 @@ from codex_simulator.tools.execution_profiler_tool import ExecutionProfilerTool 
 from codex_simulator.tools.delegate_tool import DelegateTool  # Import our new delegate tool
 from codex_simulator.tools.delegate_tool import MCPDelegateTool  # Add this import
 from codex_simulator.tools.pdf_reader_tool import PDFReaderTool # Import PDFReaderTool
+from .tools.translation_tool import TranslationTool # Import TranslationTool
 
 # Add MCP imports
 from .mcp import MCPClient, MCPToolWrapper, MCPConnectionConfig, create_mcp_client, wrap_tools_with_mcp
@@ -594,6 +595,8 @@ You can also use natural language queries like:
             ]
         elif agent_type == "pdf": # New agent type for PDF
             tools = [PDFReaderTool()]
+        elif agent_type == "translation": # New agent type for Translation
+            tools = [TranslationTool()]
         elif agent_type == "terminal":
             # Terminal commander gets delegation tool
             tools = [DelegateTool(agents_dict=self._get_agents_dict())]
@@ -615,7 +618,8 @@ You can also use natural language queries like:
             "FileNavigator": self.file_navigator(),
             "CodeExecutor": self.code_executor(),
             "WebResearcher": self.web_researcher(),
-            "PDFDocumentAnalyst": self.pdf_document_analyst() # Add PDF agent
+            "PDFDocumentAnalyst": self.pdf_document_analyst(), # Add PDF agent
+            "MultilingualTranslator": self.multilingual_translator() # Add Translation agent
         }
     
     def _create_file_navigator_agent(self) -> Agent:
@@ -670,6 +674,20 @@ You can also use natural language queries like:
             llm=self._get_llm()
         )
     
+    def _create_multilingual_translator_agent(self) -> Agent:
+        """Create the Multilingual Translator agent"""
+        return Agent(
+            role='Expert Multilingual Translator and Language Specialist',
+            goal='Provide accurate translations between any languages with cultural context and linguistic nuance.',
+            backstory="""You are a master linguist and translator with expertise in over 100 languages, 
+            including African languages like Yoruba, Swahili, and Hausa. You understand cultural nuances, 
+            formal/informal registers, and can provide contextually appropriate translations. You excel at 
+            breaking down complex phrases and explaining linguistic structures.""",
+            tools=self._create_tools("translation"),
+            verbose=True,
+            llm=self._get_llm()
+        )
+    
     def _create_terminal_commander_agent(self) -> Agent:
         """Create the Terminal Commander agent with MCP-aware delegation"""
         # Update agents dict for delegation
@@ -677,7 +695,8 @@ You can also use natural language queries like:
             "FileNavigator": self._create_file_navigator_agent(),
             "CodeExecutor": self._create_code_executor_agent(),
             "WebResearcher": self._create_web_researcher_agent(),
-            "PDFDocumentAnalyst": self._create_pdf_document_analyst_agent() # Add PDF agent
+            "PDFDocumentAnalyst": self._create_pdf_document_analyst_agent(), # Add PDF agent
+            "MultilingualTranslator": self._create_multilingual_translator_agent() # Add Translation agent
         }
         
         # Create delegation tool with MCP support
@@ -843,6 +862,23 @@ You can also use natural language queries like:
         )
 
     @agent
+    def multilingual_translator(self) -> Agent:
+        """Specialist agent for multilingual translation."""
+        return Agent(
+            config=self.agents_config.get('multilingual_translator', { # Provide default config
+                'role': 'Expert Multilingual Translator and Language Specialist',
+                'goal': 'Provide accurate translations between any languages with cultural context and linguistic nuance.',
+                'backstory': """You are a master linguist and translator with expertise in over 100 languages, 
+                including African languages like Yoruba, Swahili, and Hausa. You understand cultural nuances, 
+                formal/informal registers, and can provide contextually appropriate translations. You excel at 
+                breaking down complex phrases and explaining linguistic structures."""
+            }),
+            llm=self._get_llm(),
+            tools=[TranslationTool()], # Directly assign the tool
+            verbose=True
+        )
+
+    @agent
     def performance_monitor(self) -> Agent:
         """New agent to profile and report execution metrics."""
         return Agent(
@@ -908,6 +944,18 @@ You can also use natural language queries like:
         # So, we just need to return a Task with this config.
         return Task(config=task_config)
 
+    @task
+    def translate_text_task(self) -> Task:
+        """Task for translating text between languages."""
+        task_config_key = 'translate_text_task'
+        # Get config from YAML. It's expected to be there and define the agent by name.
+        task_config = self.tasks_config[task_config_key] 
+        
+        # CrewBase's @task decorator will resolve the agent name in task_config
+        # to an actual agent instance from self.agents.
+        # So, we just need to return a Task with this config.
+        return Task(config=task_config)
+
     @crew
     def crew(self) -> Crew:
         """Creates the standard report generation crew"""
@@ -934,15 +982,17 @@ You can also use natural language queries like:
         code_exec_agent = self.code_executor()
         web_research_agent = self.web_researcher()
         pdf_analyst_agent = self.pdf_document_analyst() # Add PDF agent
+        translation_agent = self.multilingual_translator() # Add Translation agent
         
         # Apply tool patches to fix unhashable type errors
         patch_tool_methods(file_nav_agent)
         patch_tool_methods(code_exec_agent)
         patch_tool_methods(web_research_agent)
         patch_tool_methods(pdf_analyst_agent) # Patch PDF agent
+        patch_tool_methods(translation_agent) # Patch Translation agent
         
         # Apply the cleanup to all agents that will be part of this crew
-        all_agents_in_this_crew_setup = [terminal_agent, file_nav_agent, code_exec_agent, web_research_agent, pdf_analyst_agent]
+        all_agents_in_this_crew_setup = [terminal_agent, file_nav_agent, code_exec_agent, web_research_agent, pdf_analyst_agent, translation_agent]
         for ag in all_agents_in_this_crew_setup:
             remove_competing_delegation_tools(ag)
         
@@ -951,7 +1001,8 @@ You can also use natural language queries like:
             "FileNavigator": file_nav_agent,
             "CodeExecutor": code_exec_agent,
             "WebResearcher": web_research_agent,
-            "PDFDocumentAnalyst": pdf_analyst_agent # Add PDF agent to registry
+            "PDFDocumentAnalyst": pdf_analyst_agent, # Add PDF agent to registry
+            "MultilingualTranslator": translation_agent # Add Translation agent to registry
         }
         
         # Add tools to manager - explicitly including our own delegate tool
@@ -968,7 +1019,7 @@ You can also use natural language queries like:
             f"Command history: {', '.join(self.command_history[-5:]) if self.command_history else 'None'}\n"
             f"Session context: {claude_context[:1000] + '...' if len(claude_context) > 1000 else claude_context}\n\n"
             f"CRITICAL INSTRUCTION FOR MANAGER (YOU - {terminal_agent.role}): You are a manager. Your role is to understand the task and delegate sub-tasks to your specialist coworkers using the delegation tool.\n"
-            f"Available specialists: FileNavigator (file operations), CodeExecutor (code execution), WebResearcher (web searches), PDFDocumentAnalyst (PDF analysis).\n"
+            f"Available specialists: FileNavigator (file operations), CodeExecutor (code execution), WebResearcher (web searches), PDFDocumentAnalyst (PDF analysis), MultilingualTranslator (translation tasks).\n"
             f"After receiving results from coworkers, synthesize them into a final answer for the user.\n"
             f"Provide a clear and helpful final response to the user's query, reflecting the action taken or delegated. "
             f"If the command involved a directory change, make sure to include the new directory path in your final response."
@@ -985,7 +1036,7 @@ You can also use natural language queries like:
         
         # Use sequential process instead of hierarchical to simplify delegation
         crew = Crew(
-            agents=[terminal_agent, file_nav_agent, code_exec_agent, web_research_agent, pdf_analyst_agent], # Add PDF agent to crew
+            agents=[terminal_agent, file_nav_agent, code_exec_agent, web_research_agent, pdf_analyst_agent, translation_agent], # Add Translation agent to crew
             tasks=[task],
             verbose=True,
             knowledge=self._create_knowledge_sources(),

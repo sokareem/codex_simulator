@@ -193,7 +193,55 @@ Commands follow this execution path:
 
 ## Command History
 
-### 2025-06-01 07:57:18
+### 2025-06-01 08:46:47
+
+**Command:** `How do I say "What is the weather?" in Yoruba?`
+
+**Working Directory:** `/Users/sinmi/Projects/codex_simulator`
+
+**Result:**
+
+```
+"What is the weather?" in Yoruba is: Báwo ni ojú ọjọ́?
+```
+
+ 2025-06-01 08:46:13
+
+**Command:** `Can you translate "Good morning" to Yoruba?`
+
+**Working Directory:** `/Users/sinmi/Projects/codex_simulator`
+
+**Result:**
+
+```
+The translation of "Good morning" to Yoruba is: E kaaro
+```
+
+ 2025-06-01 08:45:53
+
+**Command:** `hello`
+
+**Working Directory:** `/Users/sinmi/Projects/codex_simulator`
+
+**Result:**
+
+```
+Hello Sinmisola! How can I assist you today?
+```
+
+ 2025-06-01 08:43:04
+
+**Command:** `hello`
+
+**Working Directory:** `/Users/sinmi/Projects/codex_simulator`
+
+**Result:**
+
+```
+CREW_EXECUTION_ERROR: Error executing command via crew: "TranslationTool" object has no field "language_codes"
+```
+
+ 2025-06-01 07:57:18
 
 **Command:** `what's the current weather in Chicago?`
 
