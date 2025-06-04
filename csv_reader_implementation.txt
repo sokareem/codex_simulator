@@ -1,0 +1,241 @@
+CSV Reader Tool Implementation Plan
+
+1. Analysis of the existing PDF Reader Tool
+
+The PDF Reader Tool is designed to extract textual content from PDF documents. Its core functionality revolves around parsing the PDF structure, identifying text elements, and reconstructing the flow of text.
+
+*   Key Features/Methods:
+    *   `read_document(file_path)`: Main entry point to process a PDF.
+    *   `extract_text(page_number)`: Extracts text from a specific page.
+    *   `get_metadata()`: Retrieves document metadata (author, title, etc.).
+    *   Handles various text encodings and font types.
+    *   Manages page navigation and structure.
+*   Strengths:
+    *   Robust handling of standard PDF text layers.
+    *   Modularity, allowing for focused extraction tasks.
+    *   Error handling for corrupted or malformed PDFs (to some extent).
+*   Limitations/Challenges:
+    *   Difficulty with image-only PDFs (scanned documents) without OCR integration.
+    *   Complex layouts (multi-column, tables, mixed content) can lead to suboptimal text flow reconstruction.
+    *   Performance considerations for very large PDF files.
+    *   Dependency on underlying PDF parsing libraries (e.g., `PyPDF2`, `pdfminer.six`).
+
+The PDF Reader Tool's design principles, such as clear method separation, robust error handling, and dependency management, should be considered for the CSV Reader Tool.
+
+2. Relevant Aspects for Creating the CSV Reader Tool
+
+The CSV Reader Tool will focus on parsing Comma Separated Values (CSV) files, which are structured text files where values are separated by a delimiter.
+
+*   Core Functionality:
+    *   Reading file line by line.
+    *   Parsing each line into fields based on a specified delimiter.
+    *   Handling quoted fields that may contain delimiters or newlines.
+    *   Identifying and processing header rows.
+*   Key Considerations:
+    *   Delimiters: Support for common delimiters (comma `,`, semicolon `;`, tab `\t`, pipe `|`), etc. Should be configurable.
+    *   Quoting: Adherence to RFC 4180 standard for quoted fields (e.g., double quotes `"` to enclose fields, `""` for an escaped quote within a quoted field).
+    *   Encoding: Support for various character encodings (UTF-8, Latin-1, etc.). Should be configurable, with UTF-8 as default.
+    *   Header Row: Option to treat the first row as a header, allowing data to be accessed by column name.
+    *   Output Format:
+        *   List of lists (each inner list represents a row).
+        *   List of dictionaries (each dictionary represents a row, with keys from header).
+        *   Integration with data structures like Pandas DataFrames for advanced usage (optional, but highly beneficial).
+    *   Error Handling:
+        *   File not found.
+        *   Permission errors.
+        *   Malformed CSV lines (e.g., unclosed quotes).
+        *   Encoding errors.
+    *   Performance: Efficiently process large CSV files without excessive memory consumption.
+*   Dependencies: Python's built-in `csv` module is a robust and efficient choice for handling CSV parsing complexities.
+
+3. Proposed Python Code Structure for the CSVReaderTool
+
+```python
+import csv
+import os
+
+class CSVReaderTool:
+    """
+    A tool for reading and parsing CSV files with configurable options.
+    """
+
+    def __init__(self, delimiter=',', quotechar='"', encoding='utf-8', has_header=True):
+        """
+        Initializes the CSVReaderTool with parsing options.
+
+        Args:
+            delimiter (str): The character used to separate fields.
+            quotechar (str): The character used to quote fields containing special characters.
+            encoding (str): The character encoding of the CSV file.
+            has_header (bool): True if the first row is a header, False otherwise.
+        """
+        self.delimiter = delimiter
+        self.quotechar = quotechar
+        self.encoding = encoding
+        self.has_header = has_header
+        self.header = None # To store header if has_header is True
+
+    def read_csv(self, file_path):
+        """
+        Reads a CSV file and returns its content.
+
+        Args:
+            file_path (str): The path to the CSV file.
+
+        Returns:
+            list: A list of lists, where each inner list represents a row.
+                  If has_header is True, the first element (header) is stored
+                  in self.header and not included in the returned data rows.
+            None: If the file cannot be read or an error occurs.
+        """
+        if not os.path.exists(file_path):
+            print(f"Error: File not found at '{file_path}'")
+            return None
+        if not os.path.isfile(file_path):
+            print(f"Error: Path '{file_path}' is not a file.")
+            return None
+
+        data = []
+        try:
+            with open(file_path, 'r', newline='', encoding=self.encoding) as csvfile:
+                reader = csv.reader(csvfile, delimiter=self.delimiter, quotechar=self.quotechar)
+
+                if self.has_header:
+                    try:
+                        self.header = next(reader) # Read the first row as header
+                    except StopIteration:
+                        print(f"Warning: CSV file '{file_path}' is empty or only contains header.")
+                        self.header = [] # Empty header for empty file
+                        return [] # Return empty data if no data rows
+
+                for row in reader:
+                    data.append(row)
+            return data
+        except FileNotFoundError:
+            print(f"Error: File not found at '{file_path}'")
+            return None
+        except UnicodeDecodeError:
+            print(f"Error: Could not decode file '{file_path}' with encoding '{self.encoding}'. Try a different encoding.")
+            return None
+        except csv.Error as e:
+            print(f"Error parsing CSV file '{file_path}': {e}")
+            return None
+        except Exception as e:
+            print(f"An unexpected error occurred while reading '{file_path}': {e}")
+            return None
+
+    def read_csv_as_dicts(self, file_path):
+        """
+        Reads a CSV file and returns its content as a list of dictionaries.
+        Requires has_header to be True.
+
+        Args:
+            file_path (str): The path to the CSV file.
+
+        Returns:
+            list: A list of dictionaries, where each dictionary represents a row
+                  with header names as keys.
+            None: If the file cannot be read or an error occurs, or if has_header is False.
+        """
+        if not self.has_header:
+            print("Error: Cannot read as dictionaries without a header row (has_header must be True).")
+            return None
+
+        if not os.path.exists(file_path):
+            print(f"Error: File not found at '{file_path}'")
+            return None
+        if not os.path.isfile(file_path):
+            print(f"Error: Path '{file_path}' is not a file.")
+            return None
+
+        data = []
+        try:
+            with open(file_path, 'r', newline='', encoding=self.encoding) as csvfile:
+                reader = csv.DictReader(csvfile, delimiter=self.delimiter, quotechar=self.quotechar)
+                # DictReader automatically handles the header
+                self.header = reader.fieldnames # Store the fieldnames (header)
+
+                for row in reader:
+                    data.append(row)
+            return data
+        except FileNotFoundError:
+            print(f"Error: File not found at '{file_path}'")
+            return None
+        except UnicodeDecodeError:
+            print(f"Error: Could not decode file '{file_path}' with encoding '{self.encoding}'. Try a different encoding.")
+            return None
+        except csv.Error as e:
+            print(f"Error parsing CSV file '{file_path}': {e}")
+            return None
+        except Exception as e:
+            print(f"An unexpected error occurred while reading '{file_path}': {e}")
+            return None
+
+# Example Usage:
+if __name__ == "__main__":
+    # Create a dummy CSV file for testing
+    dummy_csv_content = """Name,Age,City
+Alice,30,New York
+Bob,24,London
+"Charlie ""Chuck"",",35,"Paris, France"
+"""
+    dummy_file_path = "test_data.csv"
+    with open(dummy_file_path, "w", newline="", encoding="utf-8") as f:
+        f.write(dummy_csv_content)
+
+    print(f"--- Reading '{dummy_file_path}' as list of lists ---")
+    csv_reader = CSVReaderTool()
+    data_list = csv_reader.read_csv(dummy_file_path)
+    if data_list:
+        print("Header:", csv_reader.header)
+        for row in data_list:
+            print(row)
+
+    print(f"\n--- Reading '{dummy_file_path}' as list of dictionaries ---")
+    csv_reader_dicts = CSVReaderTool()
+    data_dicts = csv_reader_dicts.read_csv_as_dicts(dummy_file_path)
+    if data_dicts:
+        print("Header:", csv_reader_dicts.header)
+        for row in data_dicts:
+            print(row)
+
+    # Clean up dummy file
+    os.remove(dummy_file_path)
+```
+
+# CSV Reader Tool Implementation
+
+## Overview
+The CSVReaderTool has been implemented following Nature's Way principles, embodying abundance and collective sharing mindset.
+
+## Key Features
+1. **Flexible CSV Reading**: Supports both list and dictionary output formats
+2. **Encoding Support**: Handles various character encodings (UTF-8, Latin-1, etc.)
+3. **Error Handling**: Comprehensive validation and error reporting
+4. **Nature's Way Integration**: Abundant sharing of insights and collective benefit focus
+5. **Data Structure Analysis**: Automatic type inference and structure insights
+
+## Integration Points
+- **File Navigator Agent**: CSV tool added for data file handling
+- **Data Analyst Agent**: Primary user of CSV capabilities
+- **Collective Knowledge**: Results shared abundantly with system
+
+## Usage Examples
+```python
+# Read CSV as dictionaries (default)
+result = csv_tool._run("data.csv", output_format="dict")
+
+# Read CSV as lists
+result = csv_tool._run("data.csv", output_format="list", has_header=False)
+
+# Custom delimiter and encoding
+result = csv_tool._run("data.csv", delimiter=";", encoding="latin-1")
+```
+
+## Abundance Principles Applied
+- Data insights shared abundantly
+- Structural knowledge contributed to collective
+- Reusable analysis frameworks created
+- Processing optimized for collaboration
+
+The implementation embodies Vibe Coder principles by acting without expectation, sharing knowledge abundantly, and contributing to collective intelligence.

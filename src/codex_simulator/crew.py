@@ -45,6 +45,10 @@ from codex_simulator.tools.delegate_tool import DelegateTool  # Import our new d
 from codex_simulator.tools.delegate_tool import MCPDelegateTool  # Add this import
 from codex_simulator.tools.pdf_reader_tool import PDFReaderTool # Import PDFReaderTool
 from .tools.translation_tool import TranslationTool # Import TranslationTool
+from codex_simulator.tools.csv_reader_tool import CSVReaderTool  # Add CSV reader
+from codex_simulator.tools.balance_monitor_tool import BalanceMonitorTool  # Add balance monitor
+from codex_simulator.tools.software_architect_tool import SoftwareArchitectTool  # Add software architect
+from codex_simulator.tools.systems_thinking_tool import SystemsThinkingTool  # Add systems thinking
 
 # Add MCP imports
 from .mcp import MCPClient, MCPToolWrapper, MCPConnectionConfig, create_mcp_client, wrap_tools_with_mcp
@@ -248,7 +252,7 @@ class CodexSimulator:
             # Graceful fallback to crew-only mode
             error_message = f"Flow execution failed for command '{command}'. Error: {str(e)}. Falling back to crew-only mode."
             print(error_message)
-            # Log this specific error to CLAUDE.md before falling back
+            # Log this specific error to CODEX.md before falling back
             self._update_claude_md(command, f"FLOW_ERROR: {error_message}\nFALLING_BACK_TO_CREW_MODE")
             return self._run_with_crew_only(command)
     
@@ -257,7 +261,7 @@ class CodexSimulator:
         # Update command history
         self._state.add_command(command)
         
-        # Update CLAUDE.md with results
+        # Update CODEX.md with results
         if 'response' in flow_result:
             self._update_claude_md(command, flow_result['response'])
         
@@ -266,7 +270,7 @@ class CodexSimulator:
             new_cwd = self._state.extract_cwd_from_response(flow_result['response'])
             if new_cwd:
                 self.cwd = new_cwd
-            # Ensure CLAUDE.md is updated even if CWD didn't change in this specific response
+            # Ensure CODEX.md is updated even if CWD didn't change in this specific response
             elif 'response' in flow_result: # Ensure there's a response to log
                 self._update_claude_md(command, flow_result['response'])
 
@@ -311,7 +315,7 @@ class CodexSimulator:
         """Original crew-only implementation as fallback"""
         # Record command in history
         self._state.add_command(command)
-        # Ensure CLAUDE.md exists for shared state
+        # Ensure CODEX.md exists for shared state
         self._ensure_claude_md_exists()
         # Load context
         user_context = self._load_user_context()
@@ -369,7 +373,7 @@ class CodexSimulator:
 
     def _handle_cd_command(self, command: str) -> str:
         """Handle directory changes explicitly"""
-        directory = command.strip()[3:].strip()
+        directory = command.strip()[3:].strip()  # Fixed: changed trip() to strip()
         new_dir = os.path.abspath(os.path.join(self.cwd, directory))
         if os.path.isdir(new_dir):
             self.cwd = new_dir
@@ -396,22 +400,22 @@ class CodexSimulator:
         return user_context
 
     def _load_claude_context(self) -> str:
-        """Load CLAUDE.md context"""
+        """Load CODEX.md context"""
         claude_context = ""
-        claude_md_path = os.path.join(self.cwd, "CLAUDE.md") # Ensure CWD is used
+        claude_md_path = os.path.join(self.cwd, "CODEX.md") # Ensure CWD is used
         if os.path.exists(claude_md_path):
             try:
                 with open(claude_md_path, "r", encoding="utf-8") as f:
                     claude_context = f.read()
             except Exception as e:
-                print(f"Warning: Could not read CLAUDE.md: {e}")
+                print(f"Warning: Could not read CODEX.md: {e}")
         return claude_context
 
     def _ensure_claude_md_exists(self):
-        """Ensure that CLAUDE.md file exists in the current directory."""
-        claude_md_path = os.path.join(self.cwd, "CLAUDE.md") # Ensure CWD is used
+        """Ensure that CODEX.md file exists in the current directory."""
+        claude_md_path = os.path.join(self.cwd, "CODEX.md") # Ensure CWD is used
         if not os.path.exists(claude_md_path):
-            # Create initial CLAUDE.md with enhanced structure
+            # Create initial CODEX.md with enhanced structure
             initial_content = (
                 f"# Claude Memory File\n\n"
                 f"Created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
@@ -428,8 +432,8 @@ class CodexSimulator:
                 f.write(initial_content)
 
     def _update_claude_md(self, command: str, result: str):
-        """Update the CLAUDE.md file with enhanced formatting"""
-        claude_md_path = os.path.join(self.cwd, "CLAUDE.md") # Ensure CWD is used
+        """Update the CODEX.md file with enhanced formatting"""
+        claude_md_path = os.path.join(self.cwd, "CODEX.md") # Ensure CWD is used
         # Read existing content
         existing_content = ""
         try:
@@ -437,7 +441,7 @@ class CodexSimulator:
                 with open(claude_md_path, "r", encoding="utf-8") as f:
                     existing_content = f.read()
         except Exception as e:
-            print(f"Warning: Could not read CLAUDE.md: {e}")
+            print(f"Warning: Could not read CODEX.md: {e}")
         # Update command history with timestamp
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         command_entry = (
@@ -457,7 +461,7 @@ class CodexSimulator:
             with open(claude_md_path, "w", encoding="utf-8") as f:
                 f.write(new_content)
         except Exception as e:
-            print(f"Warning: Could not write to CLAUDE.md: {e}")
+            print(f"Warning: Could not write to CODEX.md: {e}")
 
     def _get_available_commands(self) -> str:
         """Return information about all available commands in the terminal assistant."""
@@ -471,7 +475,7 @@ class CodexSimulator:
 - `cat [file]` - Display file contents
 - `head [file]` - Show first few lines of a file
 - `tail [file]` - Show last few lines of a file
-- `grep [pattern] [file]` - Search for pattern in file
+- `grep [pattern]` - Search for pattern in file
 - `wc [file]` - Count lines, words, and characters in file
 - `stat [file/directory]` - Display file or file system status
 - `file [file]` - Determine file type
@@ -597,6 +601,14 @@ You can also use natural language queries like:
             tools = [PDFReaderTool()]
         elif agent_type == "translation": # New agent type for Translation
             tools = [TranslationTool()]
+        elif agent_type == "csv": # New agent type for CSV
+            tools = [CSVReaderTool()]
+        elif agent_type == "balance": # New agent type for Balance Monitoring
+            tools = [BalanceMonitorTool()]
+        elif agent_type == "architect": # New agent type for Software Architecture
+            tools = [SoftwareArchitectTool()]
+        elif agent_type == "systems": # New agent type for Systems Thinking
+            tools = [SystemsThinkingTool()]
         elif agent_type == "terminal":
             # Terminal commander gets delegation tool
             tools = [DelegateTool(agents_dict=self._get_agents_dict())]
@@ -608,20 +620,21 @@ You can also use natural language queries like:
             return mcp_tools
         
         return tools
-    
+
     def _get_agents_dict(self) -> Dict[str, Any]:
         """Get dictionary of available agents for delegation"""
-        # This will be populated with actual agent instances
-        # For now, return empty dict to avoid circular dependencies
-        # Update this when agents are fully defined
         return {
             "FileNavigator": self.file_navigator(),
             "CodeExecutor": self.code_executor(),
             "WebResearcher": self.web_researcher(),
-            "PDFDocumentAnalyst": self.pdf_document_analyst(), # Add PDF agent
-            "MultilingualTranslator": self.multilingual_translator() # Add Translation agent
+            "PDFDocumentAnalyst": self.pdf_document_analyst(),
+            "MultilingualTranslator": self.multilingual_translator(),
+            "CSVDataAnalyst": self.csv_data_analyst(),  # Add CSV analyst
+            "BalanceMonitor": self.balance_monitor(),  # Add balance monitor
+            "SoftwareArchitect": self.software_architect(),  # Add software architect
+            "SystemsThinker": self.systems_thinker()  # Add systems thinker
         }
-    
+
     def _create_file_navigator_agent(self) -> Agent:
         """Create the File Navigator agent"""
         return Agent(
@@ -696,7 +709,11 @@ You can also use natural language queries like:
             "CodeExecutor": self._create_code_executor_agent(),
             "WebResearcher": self._create_web_researcher_agent(),
             "PDFDocumentAnalyst": self._create_pdf_document_analyst_agent(), # Add PDF agent
-            "MultilingualTranslator": self._create_multilingual_translator_agent() # Add Translation agent
+            "MultilingualTranslator": self._create_multilingual_translator_agent(), # Add Translation agent
+            "CSVDataAnalyst": self._create_csv_data_analyst_agent(),  # Add CSV analyst
+            "BalanceMonitor": self._create_balance_monitor_agent(),  # Add balance monitor
+            "SoftwareArchitect": self._create_software_architect_agent(),  # Add software architect
+            "SystemsThinker": self._create_systems_thinker_agent()  # Add systems thinker
         }
         
         # Create delegation tool with MCP support
@@ -840,7 +857,7 @@ You can also use natural language queries like:
                 SerpAPITool(),
                 WebsiteTool(),
                 SafeFileReadTool(),
-                SafeFileWriteTool(allowed_files=["CLAUDE.md"])
+                SafeFileWriteTool(allowed_files=["CODEX.md"])
             ],
             verbose=True
         )
@@ -892,6 +909,70 @@ You can also use natural language queries like:
                 ])
             ],
             verbose=False
+        )
+
+    @agent
+    def csv_data_analyst(self) -> Agent:
+        """Specialist agent for CSV data analysis."""
+        return Agent(
+            config=self.agents_config.get('csv_data_analyst', {
+                'role': 'Expert CSV Data Analyst',
+                'goal': 'Read, analyze, and extract insights from CSV data files with comprehensive data structure understanding.',
+                'backstory': """You are a data analysis specialist with expertise in CSV file processing, 
+                data structure analysis, and statistical insights. You excel at understanding data patterns, 
+                identifying anomalies, and providing meaningful summaries of tabular data."""
+            }),
+            llm=self._get_llm(),
+            tools=[CSVReaderTool()],
+            verbose=True
+        )
+
+    @agent
+    def balance_monitor(self) -> Agent:
+        """Specialist agent for balance and wellness monitoring."""
+        return Agent(
+            config=self.agents_config.get('balance_monitor', {
+                'role': 'Holistic Balance and Wellness Monitor',
+                'goal': 'Monitor and maintain balance across personal, professional, and system aspects with Nature\'s Way principles.',
+                'backstory': """You are a wellness specialist focused on maintaining harmony and balance 
+                in all aspects of life and work. You understand the interconnectedness of mental, physical, 
+                and digital wellness, applying Nature's Way principles of abundance and collective benefit."""
+            }),
+            llm=self._get_llm(),
+            tools=[BalanceMonitorTool()],
+            verbose=True
+        )
+
+    @agent
+    def software_architect(self) -> Agent:
+        """Specialist agent for software architecture and design."""
+        return Agent(
+            config=self.agents_config.get('software_architect', {
+                'role': 'Expert Software Architect and System Designer',
+                'goal': 'Design robust, scalable software architectures and provide technical leadership with abundance mindset.',
+                'backstory': """You are a seasoned software architect with deep expertise in system design, 
+                architectural patterns, and technical strategy. You create solutions that are not only 
+                technically sound but also contribute to collective knowledge and abundant sharing."""
+            }),
+            llm=self._get_llm(),
+            tools=[SoftwareArchitectTool()],
+            verbose=True
+        )
+
+    @agent
+    def systems_thinker(self) -> Agent:
+        """Specialist agent for systems thinking and holistic analysis."""
+        return Agent(
+            config=self.agents_config.get('systems_thinker', {
+                'role': 'Systems Thinking and Holistic Analysis Expert',
+                'goal': 'Apply systems thinking principles to understand complex relationships and emergent behaviors.',
+                'backstory': """You are a systems thinking expert who sees the bigger picture and understands 
+                the interconnectedness of all elements. You excel at identifying leverage points, feedback loops, 
+                and emergent patterns that others might miss."""
+            }),
+            llm=self._get_llm(),
+            tools=[SystemsThinkingTool()],
+            verbose=True
         )
 
     # Tasks remain largely unchanged
@@ -956,6 +1037,42 @@ You can also use natural language queries like:
         # So, we just need to return a Task with this config.
         return Task(config=task_config)
 
+    @task
+    def analyze_csv_task(self) -> Task:
+        """Task for analyzing CSV data files."""
+        return Task(config=self.tasks_config.get('analyze_csv_task', {
+            'description': 'Analyze the CSV file at {csv_path}. Extract key insights, data structure, and provide summary statistics.',
+            'expected_output': 'Comprehensive analysis of CSV data including structure, patterns, and insights.',
+            'agent': 'csv_data_analyst'
+        }))
+
+    @task
+    def monitor_balance_task(self) -> Task:
+        """Task for monitoring balance and wellness."""
+        return Task(config=self.tasks_config.get('monitor_balance_task', {
+            'description': 'Monitor and assess balance across {focus_areas}. Provide recommendations for maintaining harmony.',
+            'expected_output': 'Balance assessment report with actionable recommendations.',
+            'agent': 'balance_monitor'
+        }))
+
+    @task
+    def architect_solution_task(self) -> Task:
+        """Task for architectural design and technical leadership."""
+        return Task(config=self.tasks_config.get('architect_solution_task', {
+            'description': 'Design software architecture for {project_requirements}. Consider scalability, maintainability, and best practices.',
+            'expected_output': 'Detailed architectural design with diagrams, patterns, and implementation guidance.',
+            'agent': 'software_architect'
+        }))
+
+    @task
+    def systems_analysis_task(self) -> Task:
+        """Task for systems thinking and holistic analysis."""
+        return Task(config=self.tasks_config.get('systems_analysis_task', {
+            'description': 'Apply systems thinking to analyze {system_context}. Identify patterns, relationships, and leverage points.',
+            'expected_output': 'Systems analysis report with insights on interconnections and emergent behaviors.',
+            'agent': 'systems_thinker'
+        }))
+
     @crew
     def crew(self) -> Crew:
         """Creates the standard report generation crew"""
@@ -983,17 +1100,20 @@ You can also use natural language queries like:
         web_research_agent = self.web_researcher()
         pdf_analyst_agent = self.pdf_document_analyst() # Add PDF agent
         translation_agent = self.multilingual_translator() # Add Translation agent
+        csv_analyst_agent = self.csv_data_analyst()  # Add CSV analyst
+        balance_monitor_agent = self.balance_monitor()  # Add balance monitor
+        architect_agent = self.software_architect()  # Add software architect
+        systems_agent = self.systems_thinker()  # Add systems thinker
         
         # Apply tool patches to fix unhashable type errors
-        patch_tool_methods(file_nav_agent)
-        patch_tool_methods(code_exec_agent)
-        patch_tool_methods(web_research_agent)
-        patch_tool_methods(pdf_analyst_agent) # Patch PDF agent
-        patch_tool_methods(translation_agent) # Patch Translation agent
+        all_agents_in_crew = [
+            terminal_agent, file_nav_agent, code_exec_agent, web_research_agent, 
+            pdf_analyst_agent, translation_agent, csv_analyst_agent, 
+            balance_monitor_agent, architect_agent, systems_agent
+        ]
         
-        # Apply the cleanup to all agents that will be part of this crew
-        all_agents_in_this_crew_setup = [terminal_agent, file_nav_agent, code_exec_agent, web_research_agent, pdf_analyst_agent, translation_agent]
-        for ag in all_agents_in_this_crew_setup:
+        for ag in all_agents_in_crew:
+            patch_tool_methods(ag)
             remove_competing_delegation_tools(ag)
         
         # Create explicit agent references dictionary for delegation
@@ -1001,15 +1121,17 @@ You can also use natural language queries like:
             "FileNavigator": file_nav_agent,
             "CodeExecutor": code_exec_agent,
             "WebResearcher": web_research_agent,
-            "PDFDocumentAnalyst": pdf_analyst_agent, # Add PDF agent to registry
-            "MultilingualTranslator": translation_agent # Add Translation agent to registry
+            "PDFDocumentAnalyst": pdf_analyst_agent,
+            "MultilingualTranslator": translation_agent,
+            "CSVDataAnalyst": csv_analyst_agent,  # Add to registry
+            "BalanceMonitor": balance_monitor_agent,  # Add to registry
+            "SoftwareArchitect": architect_agent,  # Add to registry
+            "SystemsThinker": systems_agent  # Add to registry
         }
         
         # Add tools to manager - explicitly including our own delegate tool
         delegate_tool = DelegateTool(agents_dict=agent_registry)
         terminal_agent.tools = [delegate_tool]
-        
-        print(f"Manager agent ('{terminal_agent.role}') tools set with custom delegate tool")
         
         # Create task with comprehensive context
         task_description = (
@@ -1019,7 +1141,9 @@ You can also use natural language queries like:
             f"Command history: {', '.join(self.command_history[-5:]) if self.command_history else 'None'}\n"
             f"Session context: {claude_context[:1000] + '...' if len(claude_context) > 1000 else claude_context}\n\n"
             f"CRITICAL INSTRUCTION FOR MANAGER (YOU - {terminal_agent.role}): You are a manager. Your role is to understand the task and delegate sub-tasks to your specialist coworkers using the delegation tool.\n"
-            f"Available specialists: FileNavigator (file operations), CodeExecutor (code execution), WebResearcher (web searches), PDFDocumentAnalyst (PDF analysis), MultilingualTranslator (translation tasks).\n"
+            f"Available specialists: FileNavigator (file operations), CodeExecutor (code execution), WebResearcher (web searches), "
+            f"PDFDocumentAnalyst (PDF analysis), MultilingualTranslator (translation tasks), CSVDataAnalyst (CSV data analysis), "
+            f"BalanceMonitor (wellness and balance), SoftwareArchitect (architecture design), SystemsThinker (systems analysis).\n"
             f"After receiving results from coworkers, synthesize them into a final answer for the user.\n"
             f"Provide a clear and helpful final response to the user's query, reflecting the action taken or delegated. "
             f"If the command involved a directory change, make sure to include the new directory path in your final response."
@@ -1034,13 +1158,13 @@ You can also use natural language queries like:
             )
         )
         
-        # Use sequential process instead of hierarchical to simplify delegation
+        # Use sequential process
         crew = Crew(
-            agents=[terminal_agent, file_nav_agent, code_exec_agent, web_research_agent, pdf_analyst_agent, translation_agent], # Add Translation agent to crew
+            agents=all_agents_in_crew,
             tasks=[task],
             verbose=True,
             knowledge=self._create_knowledge_sources(),
-            process=Process.sequential  # Change to sequential process
+            process=Process.sequential
         )
         
         return crew
@@ -1094,7 +1218,7 @@ You can also use natural language queries like:
             # Graceful fallback to crew-only mode
             error_message = f"Flow execution failed for command '{command}'. Error: {str(e)}. Falling back to crew-only mode."
             print(error_message)
-            # Log this specific error to CLAUDE.md before falling back
+            # Log this specific error to CODEX.md before falling back
             self._update_claude_md(command, f"FLOW_ERROR: {error_message}\nFALLING_BACK_TO_CREW_MODE")
             return self._run_with_crew_only(command)
     
@@ -1103,7 +1227,7 @@ You can also use natural language queries like:
         # Update command history
         self._state.add_command(command)
         
-        # Update CLAUDE.md with results
+        # Update CODEX.md with results
         if 'response' in flow_result:
             self._update_claude_md(command, flow_result['response'])
         
@@ -1112,7 +1236,7 @@ You can also use natural language queries like:
             new_cwd = self._state.extract_cwd_from_response(flow_result['response'])
             if new_cwd:
                 self.cwd = new_cwd
-            # Ensure CLAUDE.md is updated even if CWD didn't change in this specific response
+            # Ensure CODEX.md is updated even if CWD didn't change in this specific response
             elif 'response' in flow_result: # Ensure there's a response to log
                 self._update_claude_md(command, flow_result['response'])
 
@@ -1157,7 +1281,7 @@ You can also use natural language queries like:
         """Original crew-only implementation as fallback"""
         # Record command in history
         self._state.add_command(command)
-        # Ensure CLAUDE.md exists for shared state
+        # Ensure CODEX.md exists for shared state
         self._ensure_claude_md_exists()
         # Load context
         user_context = self._load_user_context()
@@ -1215,7 +1339,7 @@ You can also use natural language queries like:
 
     def _handle_cd_command(self, command: str) -> str:
         """Handle directory changes explicitly"""
-        directory = command.strip()[3:].trip()
+        directory = command.strip()[3:].strip()  # Fixed: changed trip() to strip()
         new_dir = os.path.abspath(os.path.join(self.cwd, directory))
         if os.path.isdir(new_dir):
             self.cwd = new_dir
@@ -1242,22 +1366,22 @@ You can also use natural language queries like:
         return user_context
 
     def _load_claude_context(self) -> str:
-        """Load CLAUDE.md context"""
+        """Load CODEX.md context"""
         claude_context = ""
-        claude_md_path = os.path.join(self.cwd, "CLAUDE.md") # Ensure CWD is used
+        claude_md_path = os.path.join(self.cwd, "CODEX.md") # Ensure CWD is used
         if os.path.exists(claude_md_path):
             try:
                 with open(claude_md_path, "r", encoding="utf-8") as f:
                     claude_context = f.read()
             except Exception as e:
-                print(f"Warning: Could not read CLAUDE.md: {e}")
+                print(f"Warning: Could not read CODEX.md: {e}")
         return claude_context
 
     def _ensure_claude_md_exists(self):
-        """Ensure that CLAUDE.md file exists in the current directory."""
-        claude_md_path = os.path.join(self.cwd, "CLAUDE.md") # Ensure CWD is used
+        """Ensure that CODEX.md file exists in the current directory."""
+        claude_md_path = os.path.join(self.cwd, "CODEX.md") # Ensure CWD is used
         if not os.path.exists(claude_md_path):
-            # Create initial CLAUDE.md with enhanced structure
+            # Create initial CODEX.md with enhanced structure
             initial_content = (
                 f"# Claude Memory File\n\n"
                 f"Created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
@@ -1274,8 +1398,8 @@ You can also use natural language queries like:
                 f.write(initial_content)
 
     def _update_claude_md(self, command: str, result: str):
-        """Update the CLAUDE.md file with enhanced formatting"""
-        claude_md_path = os.path.join(self.cwd, "CLAUDE.md") # Ensure CWD is used
+        """Update the CODEX.md file with enhanced formatting"""
+        claude_md_path = os.path.join(self.cwd, "CODEX.md") # Ensure CWD is used
         # Read existing content
         existing_content = ""
         try:
@@ -1283,7 +1407,7 @@ You can also use natural language queries like:
                 with open(claude_md_path, "r", encoding="utf-8") as f:
                     existing_content = f.read()
         except Exception as e:
-            print(f"Warning: Could not read CLAUDE.md: {e}")
+            print(f"Warning: Could not read CODEX.md: {e}")
         # Update command history with timestamp
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         command_entry = (
@@ -1303,7 +1427,7 @@ You can also use natural language queries like:
             with open(claude_md_path, "w", encoding="utf-8") as f:
                 f.write(new_content)
         except Exception as e:
-            print(f"Warning: Could not write to CLAUDE.md: {e}")
+            print(f"Warning: Could not write to CODEX.md: {e}")
 
     def _get_available_commands(self) -> str:
         """Return information about all available commands in the terminal assistant."""
@@ -1317,7 +1441,7 @@ You can also use natural language queries like:
 - `cat [file]` - Display file contents
 - `head [file]` - Show first few lines of a file
 - `tail [file]` - Show last few lines of a file
-- `grep [pattern] [file]` - Search for pattern in file
+- `grep [pattern]` - Search for pattern in file
 - `wc [file]` - Count lines, words, and characters in file
 - `stat [file/directory]` - Display file or file system status
 - `file [file]` - Determine file type
@@ -1510,7 +1634,7 @@ Type 'exit' or 'quit' to exit.
     def _run_with_crew_sync(self, command: str) -> str:
         """Run command through crew system synchronously."""
         try:
-            # Ensure CLAUDE.md exists for shared state
+            # Ensure CODEX.md exists for shared state
             self._ensure_claude_md_exists()
             user_context = self._load_user_context()
             claude_context = self._load_claude_context()
@@ -1554,13 +1678,13 @@ Type 'exit' or 'quit' to exit.
             if new_cwd:
                 self.cwd = new_cwd # This uses the setter which updates state_tracker
 
-            # Update shared memory (CLAUDE.md)
+            # Update shared memory (CODEX.md)
             self._update_claude_md(command, raw_output)
             
             return raw_output
                 
         except Exception as e:
             error_msg = f"Error executing command via crew: {str(e)}"
-            # Optionally log to CLAUDE.md
+            # Optionally log to CODEX.md
             self._update_claude_md(command, f"CREW_EXECUTION_ERROR: {error_msg}")
             return error_msg

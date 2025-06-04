@@ -78,3 +78,90 @@ translate_text_task:
   expected_output: >
     An accurate translation with cultural context and linguistic notes when appropriate
   agent: multilingual_translator
+
+analyze_csv_task:
+  description: >
+    Analyze the CSV file located at {csv_path}.
+    
+    Your analysis should include:
+    1. Data structure examination (columns, data types, row count)
+    2. Statistical summary of numerical columns
+    3. Identification of missing or anomalous data
+    4. Key patterns and insights
+    5. Data quality assessment
+    
+    Provide recommendations for data processing or further analysis if applicable.
+    Share insights abundantly for collective benefit.
+  expected_output: >
+    A comprehensive CSV analysis report including:
+    - Data structure overview
+    - Statistical summaries
+    - Quality assessment
+    - Key insights and patterns
+    - Recommendations for next steps
+  agent: csv_data_analyst
+
+monitor_balance_task:
+  description: >
+    Monitor and assess balance across the specified focus areas: {focus_areas}.
+    
+    Your assessment should cover:
+    1. Current state analysis of each focus area
+    2. Identification of imbalances or stress points
+    3. Interconnections between different areas
+    4. Nature's Way principles application
+    5. Actionable recommendations for improvement
+    
+    Apply holistic thinking and abundance mindset in your recommendations.
+  expected_output: >
+    A balance assessment report containing:
+    - Current state analysis
+    - Identified imbalances
+    - Interconnection mapping
+    - Actionable recommendations
+    - Wellness improvement strategies
+  agent: balance_monitor
+
+architect_solution_task:
+  description: >
+    Design a software architecture solution for the given requirements: {project_requirements}.
+    
+    Your design should include:
+    1. System architecture overview
+    2. Component design and interactions
+    3. Technology stack recommendations
+    4. Scalability and performance considerations
+    5. Security and reliability measures
+    6. Implementation roadmap
+    
+    Apply abundance principles by creating reusable, well-documented solutions.
+  expected_output: >
+    A detailed architectural design document including:
+    - Architecture diagrams and patterns
+    - Component specifications
+    - Technology recommendations
+    - Implementation guidance
+    - Best practices and considerations
+  agent: software_architect
+
+systems_analysis_task:
+  description: >
+    Apply systems thinking to analyze the given context: {system_context}.
+    
+    Your analysis should identify:
+    1. System boundaries and components
+    2. Relationships and interdependencies
+    3. Feedback loops and dynamics
+    4. Leverage points for change
+    5. Emergent behaviors and patterns
+    6. Potential unintended consequences
+    
+    Provide insights that contribute to collective understanding and wisdom.
+  expected_output: >
+    A systems analysis report containing:
+    - System mapping and structure
+    - Relationship analysis
+    - Leverage point identification
+    - Emergent behavior insights
+    - Recommendations for system optimization
+  agent: systems_thinker

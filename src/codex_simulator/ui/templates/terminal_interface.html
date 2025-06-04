@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CodexSimulator Terminal</title>
+    <style>
+        .control-panel {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .stop-button {
+            background-color: #ff4444;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .stop-button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        
+        .stop-button:hover:not(:disabled) {
+            background-color: #cc3333;
+        }
+        
+        .execution-status {
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        
+        .status-running {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .status-idle {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status-stopping {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="control-panel">
+        <div id="execution-status" class="execution-status status-idle">
+            Status: Ready
+        </div>
+        <button id="stop-button" class="stop-button" disabled onclick="requestStop()">
+            ⏹️ Stop Generation
+        </button>
+    </div>
+    
+    <div id="terminal-output"></div>
+    <div id="input-area">
+        <input type="text" id="command-input" placeholder="Enter command..." />
+        <button onclick="executeCommand()" id="execute-button">Execute</button>
+    </div>
+
+    <script>
+        let executionState = {
+            isRunning: false,
+            stopRequested: false,
+            currentTask: null
+        };
+
+        function updateUIState(status) {
+            const statusDiv = document.getElementById('execution-status');
+            const stopButton = document.getElementById('stop-button');
+            const executeButton = document.getElementById('execute-button');
+            const commandInput = document.getElementById('command-input');
+
+            switch(status) {
+                case 'running':
+                    statusDiv.textContent = `Status: Executing - ${executionState.currentTask}`;
+                    statusDiv.className = 'execution-status status-running';
+                    stopButton.disabled = false;
+                    executeButton.disabled = true;
+                    commandInput.disabled = true;
+                    break;
+                    
+                case 'stopping':
+                    statusDiv.textContent = 'Status: Stopping execution...';
+                    statusDiv.className = 'execution-status status-stopping';
+                    stopButton.disabled = true;
+                    stopButton.textContent = '⏳ Stopping...';
+                    break;
+                    
+                case 'idle':
+                default:
+                    statusDiv.textContent = 'Status: Ready';
+                    statusDiv.className = 'execution-status status-idle';
+                    stopButton.disabled = true;
+                    stopButton.textContent = '⏹️ Stop Generation';
+                    executeButton.disabled = false;
+                    commandInput.disabled = false;
+                    break;
+            }
+        }
+
+        function executeCommand() {
+            const command = document.getElementById('command-input').value.trim();
+            if (!command) return;
+
+            executionState.isRunning = true;
+            executionState.stopRequested = false;
+            executionState.currentTask = command;
+            
+            updateUIState('running');
+            
+            // Send command to backend
+            fetch('/execute', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    command: command,
+                    execution_id: Date.now()
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!executionState.stopRequested) {
+                    displayResult(data.result);
+                }
+                resetExecutionState();
+            })
+            .catch(error => {
+                console.error('Execution error:', error);
+                displayResult(`Error: ${error.message}`);
+                resetExecutionState();
+            });
+        }
+
+        function requestStop() {
+            if (!executionState.isRunning) return;
+            
+            executionState.stopRequested = true;
+            updateUIState('stopping');
+            
+            // Send stop request to backend
+            fetch('/stop', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    execution_id: executionState.currentTask
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                displayResult(data.message || '🛑 Execution stopped by user');
+                resetExecutionState();
+            })
+            .catch(error => {
+                console.error('Stop request error:', error);
+                resetExecutionState();
+            });
+        }
+
+        function resetExecutionState() {
+            executionState.isRunning = false;
+            executionState.stopRequested = false;
+            executionState.currentTask = null;
+            updateUIState('idle');
+        }
+
+        function displayResult(result) {
+            const output = document.getElementById('terminal-output');
+            const resultDiv = document.createElement('div');
+            resultDiv.innerHTML = `<pre>${result}</pre>`;
+            output.appendChild(resultDiv);
+            output.scrollTop = output.scrollHeight;
+        }
+
+        // Initialize UI
+        updateUIState('idle');
+    </script>
+</body>
+</html>
