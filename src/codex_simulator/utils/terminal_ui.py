@@ -1,4 +1,4 @@
-"""Enhanced terminal UI utilities using Rich for better user experience."""
+"""Enhanced terminal UI utilities using Rich for better user experience with Nature's Way Philosophy integration."""
 
 import sys
 import time
@@ -27,6 +27,15 @@ try:
 except ImportError:
     PROMPT_TOOLKIT_AVAILABLE = False
 
+# Import nature-inspired UI components
+try:
+    from .nature_ui import nature_ui
+    from .nature_welcome import create_nature_welcome
+    from .nature_integration import nature_integration
+    NATURE_UI_AVAILABLE = True
+except ImportError:
+    NATURE_UI_AVAILABLE = False
+
 class TerminalUI:
     """Enhanced terminal UI with Rich formatting and interactive prompts."""
     
@@ -45,41 +54,63 @@ class TerminalUI:
             ])
         
     def print_ai_response(self, message: str, title: str = "AI Assistant"):
-        """Print AI response with styled formatting."""
-        if self.rich_available:
+        """Print AI response with styled formatting - Enhanced with Nature's Way principles."""
+        # Use nature UI if available, fall back to enhanced traditional
+        if NATURE_UI_AVAILABLE:
+            nature_ui.print_ase_response(message, title, include_wisdom=True)
+        elif self.rich_available:
+            # Enhanced traditional with more natural colors
             panel = Panel(
                 message,
-                title=f"[bold blue]{title}[/bold blue]",
-                border_style="blue",
-                padding=(1, 2)
+                title=f"[bold green]🌿 {title} 🌿[/bold green]",
+                border_style="bright_green",
+                padding=(1, 2),
+                subtitle="[dim cyan]Àjọ pọ̀ là ń gun òrò - Together we climb the mountain[/dim cyan]"
             )
             self.console.print(panel)
         else:
-            # Fallback to simple print
-            print(f"\n=== {title} ===")
+            # Fallback to simple print with nature elements
+            print(f"\n🌿 === {title} === 🌿")
             print(message)
-            print("=" * (len(title) + 8))
+            print("🌿" + "=" * (len(title) + 8) + "🌿")
         
     def print_system_message(self, message: str, level: str = "info"):
-        """Print system messages with appropriate styling."""
-        if self.rich_available:
+        """Print system messages with appropriate styling - Enhanced with nature elements."""
+        if NATURE_UI_AVAILABLE:
+            # Map traditional levels to nature concepts
+            nature_level_map = {
+                "info": "flow",
+                "warning": "warning", 
+                "error": "earth",
+                "success": "success"
+            }
+            nature_ui.print_nature_message(message, nature_level_map.get(level, "flow"))
+        elif self.rich_available:
+            # Enhanced nature-inspired colors
             colors = {
-                "info": "cyan",
-                "warning": "yellow", 
-                "error": "red",
-                "success": "green"
+                "info": "bright_cyan",
+                "warning": "bright_yellow", 
+                "error": "bright_red",
+                "success": "bright_green"
+            }
+            symbols = {
+                "info": "🌊",
+                "warning": "⚡", 
+                "error": "🌋",
+                "success": "🌺"
             }
             color = colors.get(level, "white")
-            self.console.print(f"[{color}]🔧 {message}[/{color}]")
+            symbol = symbols.get(level, "🌿")
+            self.console.print(f"[{color}]{symbol} {message}[/{color}]")
         else:
-            # Fallback to simple print with emoji
+            # Fallback to simple print with nature emoji
             emoji_map = {
-                "info": "ℹ️",
-                "warning": "⚠️", 
-                "error": "❌",
-                "success": "✅"
+                "info": "🌊",
+                "warning": "⚡", 
+                "error": "🌋",
+                "success": "🌺"
             }
-            emoji = emoji_map.get(level, "🔧")
+            emoji = emoji_map.get(level, "🌿")
             print(f"{emoji} {message}")
         
     def print_command_output(self, output: str, command: str = ""):
@@ -132,7 +163,24 @@ class TerminalUI:
             return SimpleProgress()
         
     def get_user_input(self, prompt_text: str = "❯ ") -> str:
-        """Get user input with history and auto-completion."""
+        """Get user input with history and auto-completion - Enhanced with natural prompts."""
+        # Use nature UI if available for adaptive prompts
+        if NATURE_UI_AVAILABLE:
+            try:
+                from .nature_integration import get_nature_prompt
+                nature_prompt = get_nature_prompt()
+                if self.prompt_toolkit_available:
+                    return prompt(
+                        nature_prompt,
+                        history=self.history,
+                        auto_suggest=AutoSuggestFromHistory(),
+                        completer=self.command_completer
+                    )
+                else:
+                    return input(nature_prompt)
+            except ImportError:
+                pass
+        
         if self.prompt_toolkit_available:
             try:
                 return prompt(
@@ -144,9 +192,9 @@ class TerminalUI:
             except (KeyboardInterrupt, EOFError):
                 return ""
         else:
-            # Fallback to basic input
+            # Fallback to basic input with nature prompt
             try:
-                return input(prompt_text)
+                return input("🌿 " if not NATURE_UI_AVAILABLE else prompt_text)
             except (KeyboardInterrupt, EOFError):
                 return ""
             
@@ -196,24 +244,49 @@ class TerminalUI:
             os.system('clear' if os.name == 'posix' else 'cls')
         
     def print_welcome(self):
-        """Print welcome message with branding."""
-        welcome_text = """CodeX Simulator Terminal Assistant
-Intelligent AI-powered terminal interaction
-
-Type 'help' for available commands or start asking questions!"""
+        """Print welcome message with branding - Enhanced with Nature's Way Philosophy."""
+        if NATURE_UI_AVAILABLE:
+            # Use fully natural welcome experience
+            try:
+                nature_ui.print_welcome_ase()
+                return
+            except Exception as e:
+                print(f"⚠️  Nature welcome failed, using fallback: {e}")
         
-        if self.rich_available:
-            formatted_text = """
-[bold blue]CodeX Simulator Terminal Assistant[/bold blue]
-[dim]Intelligent AI-powered terminal interaction[/dim]
+        # Enhanced traditional welcome with nature elements
+        try:
+            if NATURE_UI_AVAILABLE:
+                welcome_text = create_nature_welcome("Sinmi", "terminal")
+            else:
+                welcome_text = """🌳 CodeX Simulator Terminal Assistant
+🌿 Intelligent AI-powered terminal interaction
 
 Type 'help' for available commands or start asking questions!
+Àṣẹ - May your commands manifest with power! 🌟"""
+        except Exception:
+            welcome_text = """🌳 CodeX Simulator Terminal Assistant
+🌿 Intelligent AI-powered terminal interaction
+
+Type 'help' for available commands or start asking questions!
+Àṣẹ - May your commands manifest with power! 🌟"""
+        
+        if self.rich_available:
+            formatted_text = f"""
+[bold bright_green]🌳 CodeX Simulator Terminal Assistant[/bold bright_green]
+[dim bright_cyan]🌿 Where technology meets ancient wisdom[/dim bright_cyan]
+
+[bright_yellow]Kú àárọ̀, Sinmi! Welcome to your digital forest.[/bright_yellow]
+
+{welcome_text}
+
+[dim]Type 'help' for commands, 'wisdom' for inspiration, or ask anything![/dim]
+[dim]Àṣẹ - May your commands manifest with power! 🌟[/dim]
             """
-            self.console.print(Panel(formatted_text, border_style="blue"))
+            self.console.print(Panel(formatted_text, border_style="bright_green"))
         else:
-            print("\n" + "=" * 60)
+            print("\n" + "🌿" * 60)
             print(welcome_text)
-            print("=" * 60)
+            print("🌿" * 60)
 
 # Global instance
 terminal_ui = TerminalUI()

@@ -46,6 +46,23 @@ except ImportError as e:
     print(f"⚠️  Enhanced terminal UI not available: {e}")
     print("💡 Run 'python install_enhanced_deps.py' to enable enhanced features")
 
+# Add Nature UI imports with graceful fallback
+try:
+    from .utils.nature_integration import (
+        NatureUIIntegration, 
+        start_nature_session,
+        get_nature_prompt,
+        show_nature_response,
+        end_nature_session,
+        create_nature_command_handler,
+        show_nature_error,
+        show_nature_progress
+    )
+    NATURE_UI_AVAILABLE = True
+except ImportError as e:
+    NATURE_UI_AVAILABLE = False
+    print(f"⚠️  Nature UI not available: {e}")
+
 try:
     from .utils.performance_monitor import performance_monitor
     PERFORMANCE_MONITOR_AVAILABLE = True
@@ -149,11 +166,25 @@ def run_terminal_assistant_with_flows():
         run_terminal_assistant_basic_fallback()
 
 def run_terminal_assistant_simple():
-    """Simple synchronous terminal assistant."""
+    """Simple synchronous terminal assistant with Nature UI integration."""
     print("🚀 Starting CodexSimulator (Simple Mode)...")
     
     try:
+        global NATURE_UI_AVAILABLE
         assistant = CodexSimulator()
+        
+        # Initialize Nature UI session if available
+        nature_session = None
+        nature_command_handler = None
+        
+        if NATURE_UI_AVAILABLE:
+            try:
+                nature_session = start_nature_session("Sinmi", "general")
+                nature_command_handler = create_nature_command_handler(nature_session)
+                print("🌿 Nature UI initialized successfully!")
+            except Exception as e:
+                print(f"⚠️  Nature UI initialization failed: {e}")
+                NATURE_UI_AVAILABLE = False
         
         # Try enhanced UI with fallback
         ui_available = TERMINAL_UI_AVAILABLE
@@ -171,7 +202,10 @@ def run_terminal_assistant_simple():
         
         while True:
             try:
-                if ui_available:
+                # Use Nature UI prompt if available, otherwise fallback to terminal UI
+                if NATURE_UI_AVAILABLE:
+                    user_input = input(get_nature_prompt())
+                elif ui_available:
                     user_input = terminal_ui.get_user_input("❯ ")
                 else:
                     user_input = input("❯ ")
@@ -179,26 +213,43 @@ def run_terminal_assistant_simple():
                 if not user_input.strip():
                     continue
                     
+                # Handle special Nature UI commands first
+                if NATURE_UI_AVAILABLE and nature_command_handler:
+                    if nature_command_handler.handle_special_commands(user_input):
+                        continue
+                    
                 if user_input.lower() in ['exit', 'quit', 'bye']:
-                    if ui_available:
+                    if NATURE_UI_AVAILABLE:
+                        end_nature_session()
+                    elif ui_available:
                         terminal_ui.print_system_message("Goodbye! 👋", "info")
                     else:
                         print("👋 Goodbye!")
                     break
                     
                 if user_input.lower() == 'clear':
-                    if ui_available:
+                    if NATURE_UI_AVAILABLE:
+                        # Use Nature UI's intentional clearing
+                        nature_session.nature_ui.clear_with_intention()
+                    elif ui_available:
                         terminal_ui.clear_screen()
                     else:
                         os.system('clear' if os.name == 'posix' else 'cls')
                     continue
                 
-                print("⏳ Processing...")
+                # Show natural progress for processing
+                if NATURE_UI_AVAILABLE:
+                    show_nature_progress("Processing your request naturally...", 1.0, "seasonal")
+                else:
+                    print("⏳ Processing...")
                 
                 # Use the synchronous method
                 response = assistant.terminal_assistant_sync(user_input)
                 
-                if ui_available:
+                # Display response with Nature UI if available
+                if NATURE_UI_AVAILABLE:
+                    show_nature_response(response, collaborative=True, include_wisdom=True)
+                elif ui_available:
                     terminal_ui.print_ai_response(response)
                 else:
                     print(f"\n🤖 AI Response:\n{response}\n")
@@ -208,7 +259,9 @@ def run_terminal_assistant_simple():
                 continue
             except Exception as e:
                 error_msg = f"❌ Error: {str(e)}"
-                if ui_available:
+                if NATURE_UI_AVAILABLE:
+                    show_nature_error(error_msg, collaborative=True)
+                elif ui_available:
                     terminal_ui.print_system_message(error_msg, "error")
                 else:
                     print(error_msg)
